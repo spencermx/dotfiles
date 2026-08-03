@@ -1,0 +1,11 @@
+* text=auto
+
+# PowerShell and .reg files keep CRLF. The .bat/.cmd rules are gone with the
+# cmd-era scripts they protected.
+*.ps1 text eol=crlf
+*.reg text eol=crlf
+
+# Leave binaries alone
+*.exe binary
+*.dll binary
+*.pdb binary

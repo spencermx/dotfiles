@@ -1,0 +1,32 @@
+Root Compilers and interpreters
+python.exe - a c compiled binary containing isa specific machine code, this is the root process that will execute your main python file
+dotnet.exe - a c++ compiled binary containing isa specific machine code, this is the root process that will execute your c# exe
+
+--------------------------------------------------------------------------------
+*NOTE* What is an executable? my definition is a file we can run that starts a process.
+
+---- Windows Executables ----
+Portable Executable (PE) [.exe, .dll, .scr, .cpl] - .exe are executable dlls
+                                                  - .
+
+"Scripts"                                         - .bat .cmd .py .ps1 - file extensions have registry mappings to associate with their execution strategy. There are many others.
+                                                    %USERPROFILE%\documents\name.bat - cmd.exe /c name.bat
+                                                    %USERPROFILE%\documents\name.cmd - cmd.exe /c name.cmd
+                                                    %USERPROFILE%\documents\name.ps1 - powershell.exe -File name.ps1
+                                                    %USERPROFILE%\documents\name.py  - python.exe name.py
+                                                    %USERPROFILE%\documents\name.msi - msiexec.exe /i name.msi
+
+.appx .msix .msi                                  - These are not PE format
+-----------------------------
+
+
+csc.exe - invokes roslyns csc.dll
+dotnet.exe build - invokes roslyns csc.dll
+
+
+host\fxr\9.0.0\hostfxr.dll
+shared\Microsoft.NETCoreApp\9.0.0\coreclr.dll
+shared\Microsoft.NETCoreApp\9.0.0\System.Private.CoreLib.dll
+
+host initialization
+the dotnet.exe host loads the framework resolver hostfxr.dll

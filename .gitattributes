@@ -1,0 +1,13 @@
+# Repo-wide default. Git normalizes text to LF in the object database and
+# checks out the platform's native ending.
+#
+# The per-OS directories override this where they must, and those files win
+# because a more specific .gitattributes takes precedence:
+#
+#   windows/.gitattributes   *.ps1 and *.reg pinned to CRLF
+#   mac/.gitattributes       *.sh, and the shell dotfiles, pinned to LF
+#
+# The *.mp4 git-lfs rule from the repo this replaced is deliberately absent.
+# It tracked a file type that was not present -- `git lfs ls-files` returned
+# nothing -- so it was configuration for a problem that did not exist.
+* text=auto

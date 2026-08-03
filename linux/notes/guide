@@ -1,0 +1,158 @@
+# NOTE: the "symlink X config" lines below are historical. setup.sh --phase links
+# does all of that now, and the config-new-2025/ layout they reference is gone.
+
+*******************************************************************************
+# systemctl enable --now nordvpnd
+# systemctl status nordvpndn
+
+# yay -S nordvpn-bin
+# nordvpn
+# nordvpn account
+# sudo groupadd nordvpn
+# groups
+# nordvpn account
+# sudo usermod -aG nordvpn $USER
+# lspci | grep -E "VGA|3D"
+#ip link
+#ip monitor
+#git config --global --list
+#git config --list
+#hwinfo --gfxcard
+#lsmod | grep -E "nvidia|amdgpu"
+#glxinfo | grep "OpenGL renderer"
+#glinfo | grep "OpenGL renderer"
+#modinfo amdgpu | grep depends
+#lspci | grep -E "VGA|3D|Display"
+#inxi -G
+#eglinfo
+#find /usr/bin /usr/sbin -name "glxinfo" -o -name "eglinfo" -o -name "weglinfo" -o -name "glinfo"
+#modinfo ath12k | grep depends
+#vim /etc/pacman.conf 
+#cd /etc/pacman.d/
+#file mirrorlist 
+#firefox -P 
+#firefox -P "nosecfirefox"
+#firejail --list
+#curl api.ipify.org
+#ip route
+#gpg --version
+#gpg --auto-key-locate nodefault,wkd --locate-keys torbrowser@torproject.org
+#gpg --output ./tor.keyring --export 0xEF6E286DDA85EA2A4BA7DE684E2C6E8793298290
+#vim tor.keyring 
+#file tor.keyring 
+#ls -la ~/Downloads/
+#gpgv --keyring ./tor.keyring ~/Downloads/tor-browser-linux-x86_64-14.5.5.tar.xz.asc ~/Downloads/tor-browser-linux-x86_64-14.5.5.tar.xz
+#tar -xf tor-browser-linux-x86_64-14.5.5.tar.xz
+*******************************************************************************
+
+
+********************************* BASIC ***************************************
+DPKG Installs
+dpkg -i google-chrome-stable_current_amd64.deb 
+Tarball decompress
+tar -xzvf nvim-linux-x86_64.tar.gz 
+Zip File decompress
+unzip JetBrainsMono.zip -d myfont
+*******************************************************************************
+
+
+********************************* SETUP ***************************************
+Initial Command
+sudo apt update
+
+Install Chrome
+dpkg -i google-chrome-stable_current_amd64.deb 
+
+Install Github CLI
+(type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) 	&& sudo mkdir -p -m 755 /etc/apt/keyrings         && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg         && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null 	&& sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg 	&& sudo mkdir -p -m 755 /etc/apt/sources.list.d 	&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null 	&& sudo apt update 	&& sudo apt install gh -y
+
+Github CLI Login and Install repos
+gh auth login
+gh repo list
+
+Install i3
+sudo apt install i3
+--- note: symlink i3 config --- ln -s $HOME/source/repos/Linux/config-new-2025/i3/ $HOME/.config/i3
+
+Install WIFI Tray i3
+systemctl status NetworkManager
+nmcli device status
+nmcli device wifi list
+htop
+sudo apt install htop
+sudo apt update
+sudo apt install network-manager-gnome
+nm-applet &
+
+Install alacritty
+sudo snap install --classic alacritty
+--- note: symlink alacritty config --- ln -s $HOME/source/repos/Linux/config-new-2025/alacritty/ $HOME/.config/alacritty
+
+Install Rustup
+sudo snap install --classic rustup
+
+Install Cargo
+sudo apt install cargo
+
+Install lsd (alias ls=lsd in bashrc)
+rustup install stable       # only if you haven't already
+cargo install lsd --locked
+
+Install NerdFont
+mkdir ~/.local/share/fonts
+unzip JetBrainsMono.zip -d myfont
+cd myfont/
+mv *.ttf ~/.local/share/fonts/
+cd ~/.local/share/fonts/
+
+Setup Dir for apps 
+mkdir myapps
+cd myapps
+mkdir bin
+--- note: update bashrc PATH with this bin ---
+
+Download Neovim and setup link
+tar -xzvf nvim-linux-x86_64.tar.gz 
+mv ~/Downloads/nvim-linux-x86_64 ~/myapps/
+--- note: link the neovim binary --- ln -s $HOME/myapps/nvim-linux-x86_64/bin/nvim $HOME/myapps/bin/vim
+--- note: link the neovim config --- ln -s $HOME/source/repos/Linux/config-new-2025/nvim/ $HOME/.config/nvim
+
+Install Curl
+sudo apt install curl
+
+Install Lazy
+git clone https://github.com/folke/lazy.nvim.git ~/.local/share/nvim/lazy/lazy.nvim
+
+Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+
+Install Node
+nvm install node
+node -v
+npm -v 
+nvm -v
+
+Install Ripgrep for treesitter
+sudo dpkg -i ripgrep_14.1.1-1_amd64.deb 
+rg
+
+Install Yazi
+unzip yazi-x86_64-unknown-linux-gnu.zip -d yazi
+mv yazi ~/myapps/
+--- check pahts to yazi bin --- ln -s $HOME/myapps/yazi-x86_64-unknown-linux-gnu/yazi $HOME/myapps/bin/yazi
+
+Configure Git
+git config --global user.email "138399420+spencermx@users.noreply.github.com"
+git config --global user.name "spencermx"
+
+Install tmux
+sudo apt install tmux
+--- symlink tmux conf --- ln -s $HOME/source/repos/Linux/config-new-2025/.tmux.conf $HOME/.tmux.conf
+
+Install tmux plugin manager
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+--- in tmux run prefix + I so "ctrl + a + I" to install tmux resurrect plugin --- 
+
+Install clipboard
+sudo apt install xclip
+*******************************************************************************

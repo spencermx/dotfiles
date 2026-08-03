@@ -1,0 +1,19 @@
+# Build output
+*.exe
+*.obj
+*.pdb
+/bin
+/obj
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# Windows shell junk
+Thumbs.db
+desktop.ini

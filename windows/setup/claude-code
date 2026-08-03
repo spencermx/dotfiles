@@ -1,0 +1,32 @@
+Claude Code on Windows
+======================
+
+Installed via winget (package: Anthropic.ClaudeCode).
+
+  winget install Anthropic.ClaudeCode
+
+Auto-updates are managed by winget, not by Claude Code itself.
+
+
+claude doctor
+-------------
+Running: package-manager (2.1.218)
+Commit: bce61b433bc3
+Platform: win32-x64
+Package manager: winget
+Path: %USERPROFILE%\AppData\Local\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe\claude.exe
+Config install method: unknown
+Search: OK (bundled)
+Auto-updates: Managed by package manager
+Auto-update channel: latest
+
+
+Notes
+-----
+- `claude --version` to check the installed build.
+- `claude doctor` from a shell for the summary above; `/doctor` inside a
+  session for the full checkup that can also fix issues.
+- `claude --resume <session-id>` to pick a session back up.
+- Remote Control: sessions can be driven from claude.ai/code or the mobile app.
+- User settings live at %USERPROFILE%\.claude\settings.json
+- Session transcripts live under %USERPROFILE%\.claude\projects

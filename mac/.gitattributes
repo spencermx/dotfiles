@@ -1,0 +1,15 @@
+# Scoped to mac/ deliberately, so it cannot affect a sibling OS directory --
+# windows/.gitattributes pins .ps1 to CRLF, and the two must not fight.
+#
+# setup.sh is executed by bash. A CRLF line ending anywhere in it produces
+# `\r`-suffixed commands and errors that point at the wrong line, so pin LF
+# regardless of what any contributor's core.autocrlf says.
+*.sh    text eol=lf
+.zshrc      text eol=lf
+.zprofile   text eol=lf
+.gitconfig  text eol=lf
+.tmux.conf  text eol=lf
+
+# Exported Apple property lists. XML, but Terminal round-trips them and there
+# is no reason to let a checkout rewrite the endings.
+*.plist text eol=lf

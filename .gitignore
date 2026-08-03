@@ -1,0 +1,30 @@
+# OS junk. .DS_Store is the one that actually matters here: this repo is edited
+# from macOS, and without this line every `git add -A` picks one up.
+.DS_Store
+._*
+.AppleDouble
+Thumbs.db
+desktop.ini
+
+# Editor scratch
+*.swp
+*.swo
+*~
+
+# Backups written by the setup scripts. Both link phases copy an existing real
+# file to <name>.bak before replacing it with a symlink, and those land in
+# $HOME rather than here -- but a .bak inside the repo is never wanted either.
+*.bak
+*.bak.*
+
+# Build output. Carried over from the repo this replaced; nothing here builds
+# today, so anything matching these is a mistake rather than an artifact.
+*.obj
+*.exe
+*.pdb
+/bin
+/obj
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/

@@ -1,0 +1,28 @@
+{
+    "vim.easymotion": true,
+    "vim.useSystemClipboard": true,
+    "vim.smartRelativeLine": true,
+
+    "vim.insertModeKeyBindings": [
+        {
+            "before": ["j", "k"],
+            "after": ["<Esc>"]
+        }
+    ],
+    "vim.handleKeys": {
+        "<Space>": true
+    },
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": ["<Space>", "s"],
+            "commands": [
+                ":w"
+            ]
+        }
+    ],
+    "editor.minimap.enabled": false,
+    "chat.viewSessions.orientation": "stacked",
+    "workbench.editorAssociations": {
+        "*.md": "vscode.markdown.preview.editor"
+    }
+}
