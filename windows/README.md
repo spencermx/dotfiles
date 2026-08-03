@@ -8,7 +8,6 @@ nothing here reads a file from a sibling directory.
 
 ```
 setup.ps1   provisions the machine. app list and config live at the top of it.
-commands/   binaries put on PATH (gitignored — currently just drift.exe)
 config/     dotfiles, linked into place by setup.ps1
 notes/      reference
 setup/      per-tool install notes and the raw winget snapshot
@@ -66,7 +65,7 @@ back to copying without it.
 |-------|--|
 | `Packages` | `winget install` every app in the `$Packages` list that isn't already present |
 | `Env` | user environment variables — `_NT_SYMBOL_PATH`, `sqlpath` |
-| `Path` | adds `commands\`, Git's `usr\bin`, the VS Installer, NETFX tools — and prunes entries pointing at nothing |
+| `Path` | adds drift's `build\`, Git's `usr\bin`, the VS Installer, NETFX tools — and prunes entries pointing at nothing |
 | `Links` | symlinks the whole of `config/` into the places Windows expects |
 
 A **health check** runs at the end regardless of which phases you picked. It
@@ -156,15 +155,21 @@ via `vswhere` — nothing hardcodes a version path. You rarely need it:
 `devenv` and `msbuild` are on PATH permanently, so `devenv foo.sln` and
 `msbuild foo.sln` work in any shell with no setup.
 
-## commands/
+## drift
 
-On PATH, but empty in git — everything that used to live here was a cmd script.
-It now holds gitignored binaries only, currently `drift.exe`. Build that from
-the drift repo rather than committing it.
+[drift](https://github.com/spencermx/drift2) is on PATH at the directory it
+builds into — `../../drift2/build`, resolved relative to this repo so moving
+the tree keeps working. Nothing is copied and there is no install step: one
+binary, where it was produced, so there is never a question of which one you
+are running.
 
-Git won't create an empty directory on clone, so `$EnsureDirs` creates it —
-otherwise the PATH entry would be dead on a fresh machine and the prune would
-remove it.
+This replaced a `commands/` directory here plus a `WINDOWS_BIN` variable that
+drift2's `build.bat` copied into. That left two identical `drift.exe` files and
+made PATH order decide which one ran.
+
+Clone drift2 as a sibling of this repo and build it. If it isn't there the PATH
+entry fails the on-disk check and is skipped, like any other absent tool —
+though `drift` is in `$ExpectedCommands`, so the health check will say so.
 
 ## Line endings
 

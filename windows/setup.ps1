@@ -116,18 +116,18 @@ $Packages = @(
 $EnvVars = [ordered]@{
     '_NT_SYMBOL_PATH' = 'cache*C:\symbols;srv*https://msdl.microsoft.com/download/symbols'
     'sqlpath'         = "$env:USERPROFILE\data\sql"
-
-    # Where to install a binary so it lands on PATH. Published so other repos
-    # can install into it without knowing anything about this one -- drift2's
-    # build.bat copies drift.exe here when it is set. Nothing is required to
-    # honour it; a consumer that ignores it just builds to its own tree.
-    'WINDOWS_BIN'     = "$RepoRoot\commands"
 }
 
 # PATH entries. Anything not present on disk is skipped rather than added, so
 # stale tool paths degrade quietly instead of poisoning PATH.
 $PathEntries = @(
-    "$RepoRoot\commands"                # scripts from this repo
+    # drift is put on PATH where it was built. There is no copy and no install
+    # step -- one binary, in the directory that produced it, so there is never a
+    # question of which one you are running. Resolved relative to this repo so
+    # moving the whole tree keeps working. If drift2 is not cloned this fails
+    # the Test-Path check below and is skipped, like any other absent tool.
+    [IO.Path]::GetFullPath("$RepoRoot\..\..\drift2\build")
+
     "$env:USERPROFILE\.dotnet\tools"    # dotnet tool install -g lands here
     "$env:USERPROFILE\.local\bin"       # loose personal binaries
     'C:\Program Files\Git\usr\bin'      # vim, sed, grep, ssh
@@ -162,12 +162,6 @@ if ($VsRoot) {
 $EnsureDirs = @(
     "$env:USERPROFILE\.dotnet\tools"
     "$env:USERPROFILE\.local\bin"
-
-    # Everything tracked in commands\ was cmd-era and has been deleted; what
-    # lives there now is gitignored binaries (drift.exe). Git will not create an
-    # empty directory on clone, so without this the PATH entry below would be
-    # dead on a fresh machine -- and would then be pruned.
-    "$RepoRoot\commands"
 )
 
 # .NET global tools, installed with `dotnet tool install -g`. Installing any of
