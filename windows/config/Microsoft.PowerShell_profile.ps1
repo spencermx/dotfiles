@@ -251,3 +251,225 @@ function prs {
     Set-Location -LiteralPath $clone
     & code $clone
 }
+
+# --- Bulk repo status and update ---------------------------------------------
+
+# Read one repo's local state. Deliberately no network: branch name and dirtiness
+# both come off disk, so the bare `pull` view over 20 repos costs milliseconds.
+# --untracked-files=normal stops git recursing into untracked directories, which
+# is what makes this fast in a repo carrying node_modules or obj.
+function Get-RepoState {
+    param([string] $Path)
+
+    $branch = & git -C $Path rev-parse --abbrev-ref HEAD 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $branch) { $branch = '?' }
+
+    $porcelain = @(& git -C $Path status --porcelain --untracked-files=normal 2>$null)
+
+    # Untracked and modified are counted separately on purpose. Untracked files
+    # are permanent residents of half these repos (build output, node_modules)
+    # and must not make a repo look dirty -- only tracked changes block a
+    # checkout, so only tracked changes cause a skip.
+    $untracked = @($porcelain | Where-Object { $_ -like '??*' }).Count
+    $tracked   = $porcelain.Count - $untracked
+
+    [pscustomobject]@{
+        Branch    = $branch
+        Detached  = ($branch -eq 'HEAD')
+        Tracked   = $tracked
+        Untracked = $untracked
+    }
+}
+
+# Colour by what you would have to do about it, not by severity:
+#   red     tracked changes -- blocks a checkout, needs you
+#   yellow  untracked only  -- harmless, but worth seeing
+#   magenta detached HEAD   -- not on a branch at all
+#   green   clean
+function Get-StateColor {
+    param($State)
+    if ($State.Detached)      { return 'Magenta' }
+    if ($State.Tracked -gt 0) { return 'Red' }
+    if ($State.Untracked -gt 0) { return 'Yellow' }
+    return 'Green'
+}
+
+function Format-StateNote {
+    param($State)
+    if ($State.Detached) { return 'detached' }
+    $bits = @()
+    if ($State.Tracked -gt 0)   { $bits += "$($State.Tracked) changed" }
+    if ($State.Untracked -gt 0) { $bits += "$($State.Untracked) untracked" }
+    if ($bits.Count -eq 0) { return 'clean' }
+    return ($bits -join ', ')
+}
+
+# Every git repo at depth 1 or 2 below the current directory. Depth 2 is what
+# makes `pull` work from the folder holding folder-a\ and folder-b\; stopping
+# there keeps it out of node_modules and vendored trees. A directory that is
+# itself a repo is not descended into, so submodules do not show up as peers.
+function Find-Repos {
+    $found = @()
+    foreach ($d in Get-ChildItem -Directory -ErrorAction SilentlyContinue) {
+        if (Test-Path -LiteralPath (Join-Path $d.FullName '.git')) {
+            $found += $d.FullName
+            continue
+        }
+        foreach ($s in Get-ChildItem -Directory -LiteralPath $d.FullName -ErrorAction SilentlyContinue) {
+            if (Test-Path -LiteralPath (Join-Path $s.FullName '.git')) {
+                $found += $s.FullName
+            }
+        }
+    }
+    return $found
+}
+
+# Show every repo below here, or move them all onto a branch.
+#
+#   pull              status of every repo -- no network, changes nothing
+#   pull develop      checkout develop and pull, in every repo that has it
+#   pull main         same for any other branch name
+#
+# There is no fallback between branch names. Asking for develop in a repo that
+# only has main is a skip with a reason, not a silent switch to something else
+# -- guessing is how you end up on a branch you did not intend across 20 repos
+# and cannot tell which.
+function pull {
+    [CmdletBinding()]
+    param(
+        [Parameter(Position = 0)][string] $Branch,
+        [switch] $Help
+    )
+
+    if ($Help) {
+        $k = 'Cyan'
+        Write-Host ''
+        Write-Host '  pull' -ForegroundColor $k -NoNewline
+        Write-Host ' -- status of every repo below here, or move them all to a branch'
+        Write-Host ''
+        Write-Host '    pull            ' -ForegroundColor $k -NoNewline
+        Write-Host 'status only. No network, changes nothing.'
+        Write-Host '    pull <branch>   ' -ForegroundColor $k -NoNewline
+        Write-Host 'fetch, checkout <branch>, pull -- in every repo that has it'
+        Write-Host ''
+        Write-Host '  Repos are found at depth 1 and 2, so this works from the folder that'
+        Write-Host '  holds your project folders as well as from inside one.'
+        Write-Host ''
+        Write-Host '  A repo is skipped when it has ' -NoNewline
+        Write-Host 'tracked' -ForegroundColor Yellow -NoNewline
+        Write-Host ' changes, is on a detached HEAD,'
+        Write-Host '  or has no such branch. Untracked files do not block anything.'
+        Write-Host ''
+        return
+    }
+
+    $repos = Find-Repos
+    if ($repos.Count -eq 0) {
+        Write-Host 'No git repos found below here.' -ForegroundColor Yellow
+        return
+    }
+
+    $width = 0
+    foreach ($r in $repos) {
+        $n = (Split-Path -Leaf $r).Length
+        if ($n -gt $width) { $width = $n }
+    }
+
+    #-- status only ----------------------------------------------------------
+    if (-not $Branch) {
+        Write-Host ''
+        foreach ($r in $repos) {
+            $s = Get-RepoState $r
+            Write-Host ('  {0}  ' -f (Split-Path -Leaf $r).PadRight($width)) -NoNewline
+            Write-Host $s.Branch.PadRight(22) -ForegroundColor Cyan -NoNewline
+            Write-Host (Format-StateNote $s) -ForegroundColor (Get-StateColor $s)
+        }
+        Write-Host ''
+        Write-Host ("  {0} repo(s). Nothing was changed." -f $repos.Count) -ForegroundColor DarkGray
+        Write-Host ''
+        return
+    }
+
+    #-- checkout and pull ----------------------------------------------------
+    $report = @()
+
+    foreach ($r in $repos) {
+        $name  = Split-Path -Leaf $r
+        $state = Get-RepoState $r
+        $was   = $state.Branch
+
+        Write-Host ('  {0}  ' -f $name.PadRight($width)) -NoNewline
+
+        if ($state.Tracked -gt 0) {
+            Write-Host ("skipped -- {0} tracked change(s)" -f $state.Tracked) -ForegroundColor Red
+            $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$was; Result='skipped: dirty' }
+            continue
+        }
+
+        if ($state.Detached) {
+            Write-Host 'skipped -- detached HEAD' -ForegroundColor Magenta
+            $report += [pscustomobject]@{ Repo=$name; Was='(detached)'; Now='(detached)'; Result='skipped: detached' }
+            continue
+        }
+
+        # Fetch before deciding whether the branch exists. A repo cloned when it
+        # only had master has no refs/remotes/origin/develop until something
+        # fetches, so checking first would report "no such branch" for a branch
+        # that is plainly on the server. The network cost is already being paid
+        # by the pull below.
+        & git -C $r fetch --quiet origin 2>$null
+
+        & git -C $r rev-parse --verify --quiet ("refs/heads/" + $Branch) > $null 2>&1
+        $hasLocal = ($LASTEXITCODE -eq 0)
+        & git -C $r rev-parse --verify --quiet ("refs/remotes/origin/" + $Branch) > $null 2>&1
+        $hasRemote = ($LASTEXITCODE -eq 0)
+
+        if (-not $hasLocal -and -not $hasRemote) {
+            Write-Host ("skipped -- no '{0}' branch" -f $Branch) -ForegroundColor DarkGray
+            $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$was; Result="skipped: no $Branch" }
+            continue
+        }
+
+        if ($was -ne $Branch) {
+            & git -C $r checkout --quiet $Branch 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host ("FAILED -- could not check out {0}" -f $Branch) -ForegroundColor Red
+                $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$was; Result='failed: checkout' }
+                continue
+            }
+        }
+
+        $before = & git -C $r rev-parse --short HEAD 2>$null
+        $out = & git -C $r pull 2>&1
+        $pullOk = ($LASTEXITCODE -eq 0)
+        $after = & git -C $r rev-parse --short HEAD 2>$null
+        $now = & git -C $r rev-parse --abbrev-ref HEAD 2>$null
+
+        if (-not $pullOk) {
+            # The common cause is a diverged branch: local commits on $Branch
+            # that were never pushed. git refuses rather than merging, which is
+            # the right outcome -- that repo needs a human, not a bulk tool.
+            Write-Host 'FAILED -- pull refused (diverged?)' -ForegroundColor Red
+            $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$now; Result='failed: pull' }
+        }
+        elseif ($before -eq $after) {
+            Write-Host ("{0} -> {1}  already current" -f $was, $now) -ForegroundColor DarkGray
+            $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$now; Result='already current' }
+        }
+        else {
+            Write-Host ("{0} -> {1}  updated {2}..{3}" -f $was, $now, $before, $after) -ForegroundColor Green
+            $report += [pscustomobject]@{ Repo=$name; Was=$was; Now=$now; Result="updated $before..$after" }
+        }
+    }
+
+    Write-Host ''
+    Write-Host '  ---- report ----' -ForegroundColor Cyan
+    $report | Format-Table -AutoSize Repo, Was, Now, Result
+
+    $updated = @($report | Where-Object { $_.Result -like 'updated*' }).Count
+    $skipped = @($report | Where-Object { $_.Result -like 'skipped*' }).Count
+    $failed  = @($report | Where-Object { $_.Result -like 'failed*' }).Count
+    Write-Host ("  {0} updated, {1} skipped, {2} failed, {3} total" -f `
+        $updated, $skipped, $failed, $report.Count) -ForegroundColor DarkGray
+    Write-Host ''
+}
