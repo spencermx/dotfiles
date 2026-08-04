@@ -174,12 +174,51 @@ and without it every alias points at a binary that isn't on PATH yet.
 | `fe` | open Finder here |
 | `ll` / `ls` | `lsd -la` / `lsd -l` |
 | `laude` | `clear && claude` |
+| `repo` | every git repo below here — status, bulk branch update, or PR review |
 | `z` | zoxide |
 | ctrl-r / ctrl-t | fzf history and file search |
 
 `zoxide` and `fzf` were both installed as deliberate brew leaves and neither
 was ever initialised, so until now neither was reachable through the interface
 it exists for.
+
+### repo
+
+One word for everything that touches repos. What you type after it identifies
+itself — digits and URLs are pull requests, anything else is a branch name —
+so there are no subcommands and nothing to disambiguate.
+
+```
+repo             where every repo below here stands. No network.
+repo <branch>    checkout <branch> and pull, in every repo that has it
+repo <number>    review that PR of the repo you are standing in
+repo <url>       review that PR, any repo
+repo -l          every review clone and its state
+```
+
+Repos are found at depth 1 and 2, so it works from the folder holding your
+project folders as well as from inside one. A repo is skipped when it has
+tracked changes, is on a detached HEAD, or has no such branch — untracked files
+block nothing, because build output and `node_modules` are permanent residents
+of half these trees. `repo <tab>` completes branch names across every repo
+below here.
+
+Reviews never touch the trees you work in. Each repo clones once to
+`~/.prs/<owner>-<repo>` and stays; later reviews fetch and check out there with
+`--force --detach`, so nothing ever needs stashing. **Leave nothing in a review
+clone** — tracked changes there are discarded on every checkout. Untracked
+files survive on purpose, so the second review of a repo skips the rebuild.
+
+`-b <name>` forces the branch reading, for a branch actually named with digits.
+It is the only flag here you will never type.
+
+This is a port of the same function in
+[`windows/config/Microsoft.PowerShell_profile.ps1`](../windows/config/Microsoft.PowerShell_profile.ps1)
+and, like every other config living in two zones, it is a separate copy — a
+change there does not arrive here. Two zsh-specific traps are worth knowing if
+you edit it: `path` is tied to `PATH`, so a local named `path` breaks command
+lookup for the length of the call; and `$var:` is read as a history modifier, so
+git refspecs need `${var}` on both sides of the colon.
 
 ## Claude Code
 
