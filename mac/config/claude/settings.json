@@ -107,12 +107,12 @@
     "defaultMode": "default"
   },
   "model": "opus",
-  "effortLevel": "high",
-  "agentPushNotifEnabled": true,
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
+  "effortLevel": "high",
   "autoUpdatesChannel": "latest",
-  "theme": "dark"
+  "theme": "dark",
+  "agentPushNotifEnabled": true
 }
