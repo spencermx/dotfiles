@@ -66,6 +66,142 @@ function vsdev {
     & $launch -SkipAutomaticLocation
 }
 
+# --- Repo commands -----------------------------------------------------------
+
+# One word for everything that touches repos. There is no second word.
+#
+# These used to be two top-level commands, `prs` and `pull`: unrelated names,
+# no shared prefix, neither one tab-completing into the other. Reviews come in
+# bursts weeks apart, and by the time one was wanted again both names were gone.
+#
+# The obvious fix -- `repo pull` and `repo pr` -- is not a fix. It leaves both
+# old words in your memory and charges you a third one to reach them. So there
+# are no subcommands. What you type after `repo` identifies itself:
+#
+#   repo             where every repo below here stands. No network.
+#   repo <branch>    checkout <branch> and pull, in every repo that has it
+#   repo <number>    review that PR of the repo you are standing in
+#   repo <url>       review that PR, any repo
+#   repo -List       every review clone and its state
+#
+# Digits and URLs are pull requests; anything else is a branch name. Nothing to
+# recall, nothing to disambiguate, and one word total.
+#
+# This is a guess, and guessing was refused a few lines down -- a branch that
+# does not exist is a skip with a reason, never a silent switch to another one.
+# The difference is what a wrong guess costs. A branch name cannot be read as a
+# PR because branch names are not bare digits, and a *typo'd* branch name is
+# read as exactly what it is: a fetch and a "no such branch" skip in every repo,
+# which changes nothing. The two readings also cannot reach each other's trees
+# -- the PR path only ever writes under $PrRoot.
+#
+# What is deliberately not merged is the two implementations. They are opposite
+# on purpose: the PR path checks out --force because the review tree is not
+# yours, the branch path skips on tracked changes because those trees are.
+# Folding them together would put a force-checkout over your own work one flag
+# away. Only the front door is shared.
+function repo {
+    # A simple function, not [CmdletBinding()]. An advanced function rejects
+    # named arguments it does not declare, so `repo -List` would fail to bind
+    # here before ever reaching the implementation -- ValueFromRemainingArguments
+    # only collects positional leftovers. With a simple param block the extras
+    # land in $args and splat through with their switches intact.
+    #
+    # -Branch is the escape hatch for the one case the shape rule gets wrong: a
+    # branch actually named with digits. It is declared rather than sniffed so
+    # it binds properly, and it is the only thing here you will never type.
+    param([string] $Arg, [string] $Branch)
+
+    if ($Branch) { Invoke-RepoPull $Branch; return }
+
+    # A bare flag never reaches $Arg -- it is not a declared parameter, so it
+    # lands in $args and $Arg is empty. Declaring real switches instead would
+    # capture them before the implementations could see their own.
+    if (-not $Arg) {
+        if (@($args | Where-Object { $_ -match '^-?-?(h|help)$' })) { Show-RepoHelp;      return }
+        if (@($args | Where-Object { $_ -match '^-?list$' }))       { Invoke-RepoPr -List; return }
+        Invoke-RepoPull @args
+        return
+    }
+
+    switch -Regex ($Arg) {
+        # Help is not vocabulary -- every command has it, so it costs nothing to
+        # keep. It is matched here as well as above because it reaches $Arg when
+        # passed as a value (repo $x) and $args when typed as a literal flag.
+        '^-?-?(h|help)$' { Show-RepoHelp;             return }
+        '^#?\d+$'        { Invoke-RepoPr   $Arg @args; return }
+        '^https?://'     { Invoke-RepoPr   $Arg @args; return }
+        default          { Invoke-RepoPull $Arg @args; return }
+    }
+}
+
+Set-Alias prs  Invoke-RepoPr
+Set-Alias pull Invoke-RepoPull
+
+# Branch names, deduped across every repo below here. This is the only
+# completion worth having now that there are no verbs to enumerate: the
+# argument is a branch name nearly every time, and completing it means even
+# that does not have to be remembered.
+Register-ArgumentCompleter -CommandName repo -ParameterName Arg -ScriptBlock {
+    param($cmd, $param, $word)
+    $names = [System.Collections.Generic.HashSet[string]]::new()
+    foreach ($r in Find-Repos) {
+        foreach ($n in & git -C $r for-each-ref --format='%(refname)|%(refname:short)' `
+                            refs/heads refs/remotes/origin 2>$null) {
+            $full, $short = $n -split '\|', 2
+            # refs/remotes/origin/HEAD is a symref at the default branch, and
+            # git shortens it to a bare "origin" that cannot be checked out.
+            # Dropped on the full refname rather than the short one, so a branch
+            # someone really did name "origin" still completes.
+            if ($full -like '*/HEAD') { continue }
+            $short = $short -replace '^origin/', ''
+            if ($short) { [void] $names.Add($short) }
+        }
+    }
+    $names | Sort-Object | Where-Object { $_ -like "$word*" } | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+    }
+}
+
+function Show-RepoHelp {
+    $k = 'Cyan'
+    Write-Host ''
+    Write-Host '  repo' -ForegroundColor $k -NoNewline
+    Write-Host ' -- one word for every git repo below here. There is no second word.'
+    Write-Host ''
+    Write-Host '    repo             ' -ForegroundColor $k -NoNewline
+    Write-Host 'where they all stand. No network, changes nothing.'
+    Write-Host '    repo <branch>    ' -ForegroundColor $k -NoNewline
+    Write-Host 'checkout <branch> and pull, in every repo that has it'
+    Write-Host '    repo <number>    ' -ForegroundColor $k -NoNewline
+    Write-Host 'review that PR of the repo you are standing in'
+    Write-Host '    repo <url>       ' -ForegroundColor $k -NoNewline
+    Write-Host 'review that PR, any repo'
+    Write-Host '    repo -List       ' -ForegroundColor $k -NoNewline
+    Write-Host 'every review clone, what it is on, and where'
+    Write-Host ''
+    Write-Host '  Digits and URLs are pull requests, anything else is a branch. So there'
+    Write-Host '  is nothing to remember past the word itself, and ' -NoNewline
+    Write-Host 'repo <tab>' -ForegroundColor $k -NoNewline
+    Write-Host ' completes'
+    Write-Host '  branch names across every repo below here.'
+    Write-Host ''
+    Write-Host '  The review tree is not yours.' -ForegroundColor Yellow -NoNewline
+    Write-Host " Reviews are checked out under $script:PrRoot,"
+    Write-Host '  never in the repos above -- those are only ever fetched and fast-forwarded,'
+    Write-Host '  and are skipped outright when they hold tracked changes.'
+    Write-Host ''
+    Write-Host '  ' -NoNewline
+    Write-Host '-Branch <name>' -ForegroundColor DarkGray -NoNewline
+    Write-Host ' forces the branch reading, for a branch actually named' -ForegroundColor DarkGray
+    Write-Host '  with digits. ' -ForegroundColor DarkGray -NoNewline
+    Write-Host 'prs' -ForegroundColor DarkGray -NoNewline
+    Write-Host ' and ' -ForegroundColor DarkGray -NoNewline
+    Write-Host 'pull' -ForegroundColor DarkGray -NoNewline
+    Write-Host ' still work, and still take -Help of their own.' -ForegroundColor DarkGray
+    Write-Host ''
+}
+
 # --- Reviewing pull requests -------------------------------------------------
 
 # One directory holding a permanent clone of every repo ever reviewed, named
@@ -79,10 +215,10 @@ $script:PrRoot = Join-Path $HOME '.prs'
 
 # Check out someone else's PR, in a clone that exists only for reviewing.
 #
-#   prs https://github.com/owner/repo/pull/123  any repo, cloned on first use
-#   prs 123                                     the repo you are standing in
-#   prs -List                                   every review clone and its state
-#   prs                                         help, since bare is not an error
+#   repo https://github.com/owner/repo/pull/123  any repo, cloned on first use
+#   repo 123                                     the repo you are standing in
+#   repo -List                                   every review clone and its state
+#   prs                                          help, since bare is not an error
 #
 # The stash / checkout / unstash dance is not a git problem, it is a problem of
 # reviewing inside the tree you work in. A repo gets cloned under $PrRoot once,
@@ -92,7 +228,7 @@ $script:PrRoot = Join-Path $HOME '.prs'
 # Nothing here is disposable in the sense of being deleted -- the clones are the
 # point and they stay. It is the *contents* that are disposable, which is what
 # lets the checkout below be unconditional.
-function prs {
+function Invoke-RepoPr {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string] $Ref,
@@ -107,16 +243,16 @@ function prs {
     if ($Help -or (-not $Ref -and -not $List)) {
         $k = 'Cyan'
         Write-Host ''
-        Write-Host '  prs' -ForegroundColor $k -NoNewline
+        Write-Host '  repo <url|number>' -ForegroundColor $k -NoNewline
         Write-Host ' -- review a pull request in a clone kept only for reviewing'
         Write-Host ''
-        Write-Host '    prs <url>       ' -ForegroundColor $k -NoNewline
+        Write-Host '    repo <url>     ' -ForegroundColor $k -NoNewline
         Write-Host '    full PR URL, any repo'
-        Write-Host '    prs <number>    ' -ForegroundColor $k -NoNewline
+        Write-Host '    repo <number>  ' -ForegroundColor $k -NoNewline
         Write-Host '    that PR in the repo you are standing in'
-        Write-Host '    prs -List       ' -ForegroundColor $k -NoNewline
+        Write-Host '    repo -List     ' -ForegroundColor $k -NoNewline
         Write-Host '    every review clone, what it is on, and where'
-        Write-Host '    prs -Help       ' -ForegroundColor $k -NoNewline
+        Write-Host '    prs -Help      ' -ForegroundColor $k -NoNewline
         Write-Host '    this'
         Write-Host ''
         Write-Host "  Each repo clones once to $script:PrRoot\<owner>-<repo> and stays."
@@ -305,7 +441,7 @@ function Format-StateNote {
 }
 
 # Every git repo at depth 1 or 2 below the current directory. Depth 2 is what
-# makes `pull` work from the folder holding folder-a\ and folder-b\; stopping
+# makes `repo` work from the folder holding folder-a\ and folder-b\; stopping
 # there keeps it out of node_modules and vendored trees. A directory that is
 # itself a repo is not descended into, so submodules do not show up as peers.
 function Find-Repos {
@@ -326,15 +462,15 @@ function Find-Repos {
 
 # Show every repo below here, or move them all onto a branch.
 #
-#   pull              status of every repo -- no network, changes nothing
-#   pull develop      checkout develop and pull, in every repo that has it
-#   pull main         same for any other branch name
+#   repo           status of every repo -- no network, changes nothing
+#   repo develop   checkout develop and pull, in every repo that has it
+#   repo main      same for any other branch name
 #
 # There is no fallback between branch names. Asking for develop in a repo that
 # only has main is a skip with a reason, not a silent switch to something else
 # -- guessing is how you end up on a branch you did not intend across 20 repos
 # and cannot tell which.
-function pull {
+function Invoke-RepoPull {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string] $Branch,
@@ -344,12 +480,12 @@ function pull {
     if ($Help) {
         $k = 'Cyan'
         Write-Host ''
-        Write-Host '  pull' -ForegroundColor $k -NoNewline
+        Write-Host '  repo <branch>' -ForegroundColor $k -NoNewline
         Write-Host ' -- status of every repo below here, or move them all to a branch'
         Write-Host ''
-        Write-Host '    pull            ' -ForegroundColor $k -NoNewline
+        Write-Host '    repo            ' -ForegroundColor $k -NoNewline
         Write-Host 'status only. No network, changes nothing.'
-        Write-Host '    pull <branch>   ' -ForegroundColor $k -NoNewline
+        Write-Host '    repo <branch>   ' -ForegroundColor $k -NoNewline
         Write-Host 'fetch, checkout <branch>, pull -- in every repo that has it'
         Write-Host ''
         Write-Host '  Repos are found at depth 1 and 2, so this works from the folder that'
@@ -386,6 +522,16 @@ function pull {
         }
         Write-Host ''
         Write-Host ("  {0} repo(s). Nothing was changed." -f $repos.Count) -ForegroundColor DarkGray
+
+        # The footer is the whole discoverability fix, so it hangs off the one
+        # command reached by reflex rather than off -Help, which is exactly the
+        # thing nobody types. Bare `repo` and the old bare `pull` both land
+        # here, so the reflex that survived from before still teaches the rest.
+        Write-Host '  repo <branch>' -ForegroundColor DarkGray -NoNewline
+        Write-Host ' to move them  |  ' -ForegroundColor DarkGray -NoNewline
+        Write-Host 'repo <number|url>' -ForegroundColor DarkGray -NoNewline
+        Write-Host ' to review a PR  |  ' -ForegroundColor DarkGray -NoNewline
+        Write-Host 'repo -Help' -ForegroundColor DarkGray
         Write-Host ''
         return
     }
