@@ -115,11 +115,13 @@ function repo {
     if ($Branch) { Invoke-RepoPull $Branch; return }
 
     # A bare flag never reaches $Arg -- it is not a declared parameter, so it
-    # lands in $args and $Arg is empty. Declaring real switches instead would
-    # capture them before the implementations could see their own.
+    # lands in $args instead. Checked before $Arg rather than only when $Arg is
+    # empty, so `repo develop -Help` answers with help instead of trying to
+    # check out develop: the implementations below carry no -Help of their own.
+    if (@($args | Where-Object { $_ -match '^-?-?(h|help)$' })) { Show-RepoHelp; return }
+
     if (-not $Arg) {
-        if (@($args | Where-Object { $_ -match '^-?-?(h|help)$' })) { Show-RepoHelp;      return }
-        if (@($args | Where-Object { $_ -match '^-?list$' }))       { Invoke-RepoPr -List; return }
+        if (@($args | Where-Object { $_ -match '^-?list$' })) { Invoke-RepoPr -List; return }
         Invoke-RepoPull @args
         return
     }
@@ -134,9 +136,6 @@ function repo {
         default          { Invoke-RepoPull $Arg @args; return }
     }
 }
-
-Set-Alias prs  Invoke-RepoPr
-Set-Alias pull Invoke-RepoPull
 
 # Branch names, deduped across every repo below here. This is the only
 # completion worth having now that there are no verbs to enumerate: the
@@ -186,19 +185,31 @@ function Show-RepoHelp {
     Write-Host ' completes'
     Write-Host '  branch names across every repo below here.'
     Write-Host ''
+    Write-Host '  Branches. ' -ForegroundColor $k -NoNewline
+    Write-Host 'Repos are found at depth 1 and 2, so this works from the folder'
+    Write-Host '  holding your project folders as well as from inside one. A repo is skipped'
+    Write-Host '  when it has tracked changes, is on a detached HEAD, or has no such branch.'
+    Write-Host '  Untracked files block nothing.'
+    Write-Host ''
+    Write-Host '  Reviews. ' -ForegroundColor $k -NoNewline
+    Write-Host "Each repo clones once to $script:PrRoot\<owner>-<repo> and stays,"
+    Write-Host '  so the clones you actually work in are never touched and never need stashing.'
+    Write-Host ''
     Write-Host '  The review tree is not yours.' -ForegroundColor Yellow -NoNewline
-    Write-Host " Reviews are checked out under $script:PrRoot,"
-    Write-Host '  never in the repos above -- those are only ever fetched and fast-forwarded,'
-    Write-Host '  and are skipped outright when they hold tracked changes.'
+    Write-Host ' Tracked changes there are discarded on every'
+    Write-Host '  checkout, so leave nothing in one. Untracked files survive on purpose:'
+    Write-Host '  node_modules and obj carry over, so the second review skips the rebuild.'
+    Write-Host ''
+    Write-Host '    git diff origin/<base>...HEAD' -ForegroundColor $k -NoNewline
+    Write-Host '    what the author changed; three dots'
+    Write-Host '                                     exclude what landed on base since'
+    Write-Host '    gh pr diff <number>          ' -ForegroundColor $k -NoNewline
+    Write-Host '    read one without cloning at all'
     Write-Host ''
     Write-Host '  ' -NoNewline
     Write-Host '-Branch <name>' -ForegroundColor DarkGray -NoNewline
     Write-Host ' forces the branch reading, for a branch actually named' -ForegroundColor DarkGray
-    Write-Host '  with digits. ' -ForegroundColor DarkGray -NoNewline
-    Write-Host 'prs' -ForegroundColor DarkGray -NoNewline
-    Write-Host ' and ' -ForegroundColor DarkGray -NoNewline
-    Write-Host 'pull' -ForegroundColor DarkGray -NoNewline
-    Write-Host ' still work, and still take -Help of their own.' -ForegroundColor DarkGray
+    Write-Host '  with digits -- the one case the shape rule gets wrong.' -ForegroundColor DarkGray
     Write-Host ''
 }
 
@@ -218,7 +229,9 @@ $script:PrRoot = Join-Path $HOME '.prs'
 #   repo https://github.com/owner/repo/pull/123  any repo, cloned on first use
 #   repo 123                                     the repo you are standing in
 #   repo -List                                   every review clone and its state
-#   prs                                          help, since bare is not an error
+#
+# Reached only through `repo`, which is why there is no help of its own here --
+# there is one help, and `repo -Help` is it.
 #
 # The stash / checkout / unstash dance is not a git problem, it is a problem of
 # reviewing inside the tree you work in. A repo gets cloned under $PrRoot once,
@@ -232,45 +245,11 @@ function Invoke-RepoPr {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string] $Ref,
-        [switch] $List,
-        [switch] $Help
+        [switch] $List
     )
 
-    # Bare `prs` prints help rather than failing. Reviews come in bursts weeks
-    # apart, so the thing worth being reminded of is not the syntax -- it is
-    # that the review tree throws your edits away. Following drift: say only
-    # what you could not have guessed.
-    if ($Help -or (-not $Ref -and -not $List)) {
-        $k = 'Cyan'
-        Write-Host ''
-        Write-Host '  repo <url|number>' -ForegroundColor $k -NoNewline
-        Write-Host ' -- review a pull request in a clone kept only for reviewing'
-        Write-Host ''
-        Write-Host '    repo <url>     ' -ForegroundColor $k -NoNewline
-        Write-Host '    full PR URL, any repo'
-        Write-Host '    repo <number>  ' -ForegroundColor $k -NoNewline
-        Write-Host '    that PR in the repo you are standing in'
-        Write-Host '    repo -List     ' -ForegroundColor $k -NoNewline
-        Write-Host '    every review clone, what it is on, and where'
-        Write-Host '    prs -Help      ' -ForegroundColor $k -NoNewline
-        Write-Host '    this'
-        Write-Host ''
-        Write-Host "  Each repo clones once to $script:PrRoot\<owner>-<repo> and stays."
-        Write-Host '  Later reviews of it fetch and check out in place, so the clones you'
-        Write-Host '  actually work in are never touched and never need stashing.'
-        Write-Host ''
-        Write-Host '  The review tree is not yours.' -ForegroundColor Yellow -NoNewline
-        Write-Host ' Uncommitted changes to tracked files are'
-        Write-Host '  discarded on every checkout, so do not leave anything in one. Untracked'
-        Write-Host '  files survive on purpose: node_modules and obj carry over, and the'
-        Write-Host '  second review of a repo skips the rebuild.'
-        Write-Host ''
-        Write-Host '    git diff origin/<base>...HEAD' -ForegroundColor $k -NoNewline
-        Write-Host '    what the author changed; three dots'
-        Write-Host '                                     excludes what landed on base since'
-        Write-Host '    gh pr diff <number>          ' -ForegroundColor $k -NoNewline
-        Write-Host '    read one without cloning at all'
-        Write-Host ''
+    if (-not $Ref -and -not $List) {
+        Write-Error 'No PR given -- see repo -Help'
         return
     }
 
@@ -324,7 +303,7 @@ function Invoke-RepoPr {
         }
     }
     else {
-        Write-Error "Could not read '$Ref' as a PR URL or number -- see prs -Help"
+        Write-Error "Could not read '$Ref' as a PR URL or number -- see repo -Help"
         return
     }
 
@@ -391,7 +370,7 @@ function Invoke-RepoPr {
 # --- Bulk repo status and update ---------------------------------------------
 
 # Read one repo's local state. Deliberately no network: branch name and dirtiness
-# both come off disk, so the bare `pull` view over 20 repos costs milliseconds.
+# both come off disk, so the bare `repo` view over 20 repos costs milliseconds.
 # --untracked-files=normal stops git recursing into untracked directories, which
 # is what makes this fast in a repo carrying node_modules or obj.
 function Get-RepoState {
@@ -470,34 +449,14 @@ function Find-Repos {
 # only has main is a skip with a reason, not a silent switch to something else
 # -- guessing is how you end up on a branch you did not intend across 20 repos
 # and cannot tell which.
+#
+# Reached only through `repo`, which is why there is no help of its own here --
+# there is one help, and `repo -Help` is it.
 function Invoke-RepoPull {
     [CmdletBinding()]
     param(
-        [Parameter(Position = 0)][string] $Branch,
-        [switch] $Help
+        [Parameter(Position = 0)][string] $Branch
     )
-
-    if ($Help) {
-        $k = 'Cyan'
-        Write-Host ''
-        Write-Host '  repo <branch>' -ForegroundColor $k -NoNewline
-        Write-Host ' -- status of every repo below here, or move them all to a branch'
-        Write-Host ''
-        Write-Host '    repo            ' -ForegroundColor $k -NoNewline
-        Write-Host 'status only. No network, changes nothing.'
-        Write-Host '    repo <branch>   ' -ForegroundColor $k -NoNewline
-        Write-Host 'fetch, checkout <branch>, pull -- in every repo that has it'
-        Write-Host ''
-        Write-Host '  Repos are found at depth 1 and 2, so this works from the folder that'
-        Write-Host '  holds your project folders as well as from inside one.'
-        Write-Host ''
-        Write-Host '  A repo is skipped when it has ' -NoNewline
-        Write-Host 'tracked' -ForegroundColor Yellow -NoNewline
-        Write-Host ' changes, is on a detached HEAD,'
-        Write-Host '  or has no such branch. Untracked files do not block anything.'
-        Write-Host ''
-        return
-    }
 
     $repos = Find-Repos
     if ($repos.Count -eq 0) {
@@ -523,10 +482,10 @@ function Invoke-RepoPull {
         Write-Host ''
         Write-Host ("  {0} repo(s). Nothing was changed." -f $repos.Count) -ForegroundColor DarkGray
 
-        # The footer is the whole discoverability fix, so it hangs off the one
-        # command reached by reflex rather than off -Help, which is exactly the
-        # thing nobody types. Bare `repo` and the old bare `pull` both land
-        # here, so the reflex that survived from before still teaches the rest.
+        # The footer is the whole discoverability fix, so it hangs off bare
+        # `repo` -- the one form reached without thinking -- rather than off
+        # -Help, which is exactly the thing nobody types when they have already
+        # forgotten there was something to ask about.
         Write-Host '  repo <branch>' -ForegroundColor DarkGray -NoNewline
         Write-Host ' to move them  |  ' -ForegroundColor DarkGray -NoNewline
         Write-Host 'repo <number|url>' -ForegroundColor DarkGray -NoNewline
