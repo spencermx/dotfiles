@@ -37,6 +37,25 @@ ls -s /usr/bin/vim /usr/bin/vi
 visudo #uncomment wheel
 ```
 
+## Get the repo
+
+This step was missing from the original scripts entirely -- they jumped from
+"install github-cli" straight to running a setup.sh that assumed the repo was
+already sitting on disk. It isn't yet. None of this needs SSH keys: the
+tracked `config/.gitconfig` routes GitHub HTTPS through `gh auth git-credential`,
+so authenticating `gh` once is enough for both `git clone` and everything
+`setup.sh` does afterward.
+
+```sh
+gh auth login
+# GitHub.com -> HTTPS -> log in via browser -> account: spencermx
+
+git clone https://github.com/spencermx/dotfiles.git ~/source/repos-spencermx/dotfiles
+cd ~/source/repos-spencermx/dotfiles/linux
+./setup.sh --dry-run   # see what it will do first
+./setup.sh
+```
+
 ## After first boot
 
 From `install5.sh`. The git identity is set by `config/.gitconfig` once

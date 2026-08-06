@@ -31,6 +31,14 @@ magenta = "#6c71c4" # Soft lavender for bright, distinct elements
 cyan = "#93a1a1" # Pale cyan for clear, bright accents
 white = "#fdf6e3" # Creamy white for maximum brightness and clarity
 
+[selection]
+save_to_clipboard = true
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
+
 # [keyboard]
 # bindings = [
 #   { key = "T", mods = "Alt", chars = "\u001bt" },

@@ -2,30 +2,21 @@
 #
 # Provisions an Arch machine from this repo.
 #
-# Replaces install1.sh .. install5.sh, which were seven files with overlapping
-# jobs, two of them near-identical forks, and two of them containing no
-# executable code at all. What those scripts did is preserved here as phases;
-# what they only described in comments moved to notes/arch-install.md.
+#   ./setup.sh --dry-run          preview, changes nothing
+#   ./setup.sh                    run everything: packages, links, services (in that order)
+#   ./setup.sh --phase packages            just install packages
+#   ./setup.sh --phase links               just symlink dotfiles
+#   ./setup.sh --phase services            just enable services
+#   ./setup.sh --phase packages,links      packages then links
+#   ./setup.sh --phase packages,services   packages then services
+#   ./setup.sh --phase links,services      links then services
+#   ./setup.sh --machine asus     laptop config instead of desktop (auto-detected)
 #
-#   ./setup.sh --dry-run          show what would change, touch nothing
-#   ./setup.sh                    do it
-#   ./setup.sh --phase links      run one phase (repeatable, or comma-separated)
-#   ./setup.sh --machine asus     provision the ASUS laptop instead of the desktop
+# packages/services need your sudo password -- run from a real terminal.
+# links needs no sudo. Safe to re-run; only touches what isn't already correct.
 #
-# MACHINE VARIANTS
-#
-# Two machines share this directory. They differ in exactly two configs, so
-# rather than the old approach -- a whole forked copy of the link script per
-# machine -- $MACHINE selects between them:
-#
-#   desktop   config/hypr        config/alacritty       (font 10.666666)
-#   asus      config/hypr-asus   config/alacritty-4k    (font 11)
-#
-# Everything else is identical between them. If it is not detected correctly,
-# pass --machine explicitly.
-#
-# ZONE RULE: linux/ is self-contained. Every file this script links is under
-# linux/config/, and nothing here reads a sibling OS directory.
+# After packages installs github-cli, run `gh auth login` yourself once --
+# the script installs the binary, it doesn't log you in.
 
 set -o pipefail
 
@@ -43,7 +34,7 @@ PACKAGES=(
     neovim dolphin yazi bemenu unzip wl-clipboard tree less hwinfo
     bluez bluez-utils blueman
     pipewire pipewire-pulse pipewire-alsa wireplumber pipewire-audio
-    nvidia nvidia-utils brightnessctl github-cli waybar firefox man-db alacritty
+    nvidia-open nvidia-utils brightnessctl github-cli waybar firefox man-db alacritty
     firejail proton-vpn-gtk-app mesa-demos mesa-utils
     noto-fonts ttf-dejavu ttf-liberation archlinux-keyring
     plasma-workspace gwenview hyprpaper lsd
@@ -175,7 +166,7 @@ parse_args() {
                 PHASES="$PHASES $(printf '%s' "$1" | tr ',' ' ')"
                 ;;
             --help|-h)
-                sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^#\{1,2\} \{0,1\}//'
+                sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^#\{1,2\} \{0,1\}//'
                 exit 0
                 ;;
             *) echo "unknown argument: $1" >&2; exit 2 ;;
