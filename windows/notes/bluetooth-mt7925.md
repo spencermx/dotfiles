@@ -1,4 +1,4 @@
-# Bluetooth: MT7925 (RZ717) — working again; cause not fully isolated
+# Bluetooth: MT7925 (RZ717) — working on both OSes; cause not fully isolated
 
 Bluetooth works as of 2026-08-06. The hardware is fine — no reseat, no BIOS
 update, no driver change, nothing to wait on upstream.
@@ -133,22 +133,75 @@ LastArrivalDate   2026-08-01 07:18:02   -> after the fix, 2026-08-06 15:46:22
   at the same port. Strong inference that it was the Bluetooth, though not
   directly proven.
 
-## Arch: re-test, but do not assume
+## Arch: works, as of 2026-08-06 16:14
 
-The Linux investigation concluded MediaTek BT was unsupported. That rested on
-the false premise that the hardware worked in Windows while Linux could not
-see it — in fact Windows was broken too, from 8/1 onward.
+Whatever fixed Windows fixed Arch too. Stock kernel 7.1.5, stock btusb, no
+patch, no DKMS, no module options. Scanning finds real devices; A2DP sink and
+source and Handsfree profiles are all present.
 
-Whether the Windows fix means anything for Arch depends entirely on which
-change did it, which is unknown:
+```
+usb 3-7: new high-speed USB device number 2
+usb 3-7: New USB device found, idVendor=0e8d, idProduct=0717
+Bluetooth: hci0: Device setup in 18150020 usecs
+Controller D8:B3:2F:44:73:CA (public)   Powered: yes
+```
 
-- If the **devnode removal** was the fix, it was a Windows-side PnP problem
-  and implies nothing about Linux.
-- If **Fast Startup** was the fix, then Arch was inheriting a radio left
-  latched off by Windows hybrid shutdown, and it should now work.
+This also settles the `error -71` question: `3-7` is the Bluetooth. It is the
+same port that used to fail, now enumerating clean at high speed with the right
+IDs. The low-speed reading was the symptom, not evidence against.
 
-So: boot Arch and check. Do not conclude anything about btusb from a single
-failure there.
+The still-unanswered question stays unanswered — devnode removal vs Fast
+Startup, still not isolated, and now both are in place so there is nothing left
+to separate them with short of deliberately re-breaking it.
+
+### Init is marginal — expect the occasional bad boot
+
+The first Arch boot after the Windows fix brought the device up but failed to
+initialise it:
+
+```
+Bluetooth: hci0: Execution of wmt command timed out
+Bluetooth: hci0: Failed to send wmt func ctrl (-110)
+```
+
+`hci0` existed, `rfkill` listed it, `bluetoothctl` said "No default controller
+available". The next boot succeeded — but took **18 seconds** to set up, which
+is `btmtk`'s internal one-shot retry (`BTMTK_FIRMWARE_DL_RETRY` ->
+`btmtk_reset_sync`) working rather than a clean first pass.
+
+So the firmware download succeeds and the `FUNC_CTRL` immediately after it is
+what's flaky. That is a known upstream bug: the BT core re-arms sleep
+protection once the firmware is running, so the next WMT command gets no
+answer. Register `0x18011100` bit 1 controls it.
+
+Not in mainline — checked `torvalds/linux` HEAD on 2026-08-06 (7.2-rc6 era),
+no `0x18011100` anywhere in `drivers/bluetooth/`. A patch was posted to
+linux-bluetooth on 2026-05-31 ("Bluetooth: btmtk: Fix MT7925 WMT command
+timeout due to sleep protection") and has not landed.
+
+If bad boots become frequent, the fix is small and self-contained: write that
+register before the firmware download and again before `FUNC_CTRL`, using the
+existing `btmtk_usb_uhw_reg_write()` (`drivers/bluetooth/btmtk.c:779`). The
+call site to wrap is the `case 0x7925:` arm of `btmtk_usb_setup()`, around
+`btmtk.c:1371-1417`. Ship it as DKMS so it survives kernel updates and comes
+straight back out when upstream lands the real one. Until then a reboot is the
+cheaper fix.
+
+### Do not try to recover it with a USB rebind
+
+Unbinding and rebinding `btusb` to force a re-probe **wedges the device**:
+
+```
+usb 3-7: device not accepting address 2, error -71
+usb 3-7: USB disconnect, device number 2
+usb 3-7: device descriptor read/64, error -110
+```
+
+It then disappears from `lsusb` entirely and does not come back on its own.
+Tried on 2026-08-06; only a power cycle recovered it. The radio does not
+survive a USB-level reset in this state, so there is no iterating on it live —
+any fix has to be in place *before* the first probe at boot, one attempt per
+boot. Same applies to `usbreset` and to unbind/rebind of the xHCI controller.
 
 ## Hardware reference
 
