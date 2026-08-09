@@ -54,16 +54,25 @@ has no display server, and it is provisioned once behind a one-way gate after
 which `sudo` is purged, so "re-runnable" applies only to the phases that need
 no root. Read [debian/README.md](debian/README.md) before touching it.
 
-## The zones are independent
+## The zones are independent, except for `common/`
 
 **No file in one OS directory is read by another.** Configs that appear in more
-than one place are separate copies, and a change to one does not propagate.
+than one OS directory are separate copies, and a change to one does not
+propagate. The one exception is `common/`, which any zone may read.
 
-This is deliberate and was arrived at the hard way. The editor config in
-`archlinux/config/nvim` and `mac/config/nvim` is the same 33 files, and it was
-briefly shared by pointing one at the other. That coupling meant a mac change
-edited the Linux config, and `mac/setup.sh` could not run unless `archlinux/`
-existed. Two copies and an occasional manual sync is the cheaper problem.
+The distinction was arrived at the hard way. The editor config — 33 nvim files
+plus `.vimrc` — was once shared by pointing one zone at another. That coupling
+meant a mac change edited the Linux config, and `mac/setup.sh` could not run
+unless `archlinux/` existed.
+
+`common/` fixes the first half and not the second. A path under `common/`
+announces that editing it changes every OS, where `mac/config/nvim` quietly
+pointing at `archlinux/` did not. But a zone still needs `common/` beside it to
+provision a machine.
+
+A file earns a place in `common/` only by being byte-identical everywhere it
+appears. When one OS needs it to differ, it moves back into that zone rather
+than growing a conditional.
 
 The same applies to `.gitattributes`: `windows/` pins `.ps1` to CRLF, `mac/`
 pins `.sh` to LF, and both are scoped to their own directory so they cannot

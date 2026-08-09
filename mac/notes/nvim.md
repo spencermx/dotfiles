@@ -1,14 +1,14 @@
 # Neovim on macOS
 
-The config lives at `config/nvim/` and is linked to `~/.config/nvim` by
-`setup.sh`. It is mac's own copy — 33 files, ~1900 lines — not a link into any
-other OS directory.
+The config lives at `common/config/nvim/` and is linked to `~/.config/nvim` by
+`setup.sh` via `$SHARED_ROOT`. It is shared with the arch zone — 33 files,
+~1900 lines, one copy. Editing it changes Linux too.
 
-It still carries a `Darwin` branch in `config/nvim/lua/plugins/formatter.lua`,
-which picks the right `shfmt` binary per architecture. That was written when
-this config was shared; on a mac-only copy the `Darwin.*arm` / `Darwin.*x86`
-split still matters (Apple Silicon vs Intel), but the non-Darwin fallback is
-now dead code. Harmless, and worth knowing before you read it and wonder.
+It carries a `Darwin` branch in `common/config/nvim/lua/plugins/formatter.lua`,
+which picks the right `shfmt` binary per architecture. The `Darwin.*arm` /
+`Darwin.*x86` split covers Apple Silicon vs Intel, and the non-Darwin fallback
+is live again now that archlinux reads the same file — it was dead code only
+during the period when this was a mac-only copy.
 
 ## What setup.sh does for you
 

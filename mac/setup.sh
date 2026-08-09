@@ -31,6 +31,11 @@ set -o pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # .../dotfiles/mac
 
+# Configs byte-identical across zones live in common/ instead of being kept in
+# sync by hand. This is the only path that reaches outside the zone, so this
+# zone no longer provisions a machine alone -- it needs common/ beside it.
+SHARED_ROOT="$(dirname "$REPO_ROOT")/common"                # .../dotfiles/common
+
 #---------------------------------------------------------------------------
 # Configuration
 #---------------------------------------------------------------------------
@@ -142,26 +147,31 @@ ENSURE_DIRS=(
 
 # "link location|file in this repo"
 #
-# Every target is under mac/config/. Nothing points outside this directory.
+# Targets are under mac/config/, except those marked SHARED_ROOT, which are
+# under common/config/ because every zone uses the same file.
 LINKS=(
     "$HOME/.zprofile|$REPO_ROOT/config/.zprofile"
     "$HOME/.zshrc|$REPO_ROOT/config/.zshrc"
     "$HOME/.gitconfig|$REPO_ROOT/config/.gitconfig"
-    "$HOME/.tmux.conf|$REPO_ROOT/config/.tmux.conf"
+    "$HOME/.gitconfig.common|$SHARED_ROOT/config/.gitconfig"
+    "$HOME/.tmux.conf|$SHARED_ROOT/config/.tmux.conf"
     "$HOME/.aerospace.toml|$REPO_ROOT/config/.aerospace.toml"
     "$HOME/.config/karabiner/karabiner.json|$REPO_ROOT/config/karabiner.json"
-    "$HOME/.config/git/ignore|$REPO_ROOT/config/git/ignore"
+    "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
+
+    # The file is shared; only the location VS Code reads it from is per-OS.
+    "$HOME/Library/Application Support/Code/User/settings.json|$SHARED_ROOT/config/vscode/settings.json"
 
     # Claude Code's per-directory memory does not carry between sibling working
     # directories, so instructions that must always apply cannot live there.
     # This file loads in every session whatever the cwd, which is the only
     # place a rule like "no AI attribution in commits" actually holds. The mac
     # had neither of these files -- that rule was enforced on Windows only.
-    "$HOME/.claude/CLAUDE.md|$REPO_ROOT/config/claude/CLAUDE.md"
-    "$HOME/.claude/settings.json|$REPO_ROOT/config/claude/settings.json"
+    "$HOME/.claude/CLAUDE.md|$SHARED_ROOT/config/claude/CLAUDE.md"
+    "$HOME/.claude/settings.json|$SHARED_ROOT/config/claude/settings.json"
 
-    "$HOME/.config/nvim|$REPO_ROOT/config/nvim"
-    "$HOME/.vimrc|$REPO_ROOT/config/.vimrc"
+    "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
+    "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
 )
 
 # Links that used to exist and should not any more. Removed only if they are

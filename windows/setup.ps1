@@ -52,6 +52,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
+# Configs byte-identical across zones live in common/ instead of being kept in
+# sync by hand. This is the only path that reaches outside the zone, so this
+# zone no longer provisions a machine alone -- it needs common/ beside it.
+$SharedRoot = Join-Path (Split-Path -Parent $RepoRoot) 'common'
+
 # Resolve Documents properly. On a machine with OneDrive Known Folder Move this
 # is NOT %USERPROFILE%\Documents, and hardcoding it would put the PowerShell
 # profile somewhere PowerShell never looks.
@@ -192,19 +197,21 @@ $ExpectedCommands = @('git', 'gh', 'vim', 'drift', 'code', 'winget', 'devenv', '
 # link location -> file in this repo
 $Links = [ordered]@{
     "$env:USERPROFILE\.gitconfig"                              = "$RepoRoot\config\.gitconfig"
-    "$env:USERPROFILE\.vimrc"                                  = "$RepoRoot\config\.vimrc"
-    "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json" = "$RepoRoot\config\vscode\settings.json"
+    "$env:USERPROFILE\.gitconfig.common"                       = "$SharedRoot\config\.gitconfig"
+    "$env:USERPROFILE\.config\git\ignore"                      = "$SharedRoot\config\git\ignore"
+    "$env:USERPROFILE\.vimrc"                                  = "$SharedRoot\config\.vimrc"
+    "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json" = "$SharedRoot\config\vscode\settings.json"
     # Claude Code's per-directory memory does not carry between sibling working
     # directories, so instructions that must always apply cannot live there.
     # This file loads in every session whatever the cwd, which is the only
     # place a rule like "no AI attribution in commits" actually holds.
-    "$env:USERPROFILE\.claude\CLAUDE.md"                       = "$RepoRoot\config\claude\CLAUDE.md"
+    "$env:USERPROFILE\.claude\CLAUDE.md"                       = "$SharedRoot\config\claude\CLAUDE.md"
     # attribution.commit/pr are set to "" here, which is what actually stops the
     # Co-Authored-By trailer being generated. The CLAUDE.md rule above still
     # says so in words, but this is the half that does not depend on it being
     # read. permissions.allow covers the read-only and routine-workflow commands
     # so they stop prompting; see the ask/deny lists for what still stops.
-    "$env:USERPROFILE\.claude\settings.json"                   = "$RepoRoot\config\claude\settings.json"
+    "$env:USERPROFILE\.claude\settings.json"                   = "$SharedRoot\config\claude\settings.json"
     # PowerShell 5.1 and PowerShell 7 read profiles from different folders --
     # WindowsPowerShell\ and PowerShell\ respectively. Link both to the same
     # file so either shell behaves identically.

@@ -22,6 +22,12 @@ set -o pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Configs byte-identical across zones live in common/ instead of being kept in
+# sync by hand. This is the only path that reaches outside the zone, so this
+# zone no longer provisions a machine alone -- it needs common/ beside it.
+# Unrelated to LINKS_COMMON below, which means "common to every arch machine".
+SHARED_ROOT="$(dirname "$REPO_ROOT")/common"
+
 #---------------------------------------------------------------------------
 # Configuration
 #---------------------------------------------------------------------------
@@ -59,11 +65,26 @@ SYSTEM_SERVICES=(bluetooth.service)
 # personal documents and now live in the private `personal` repo, so they are
 # deliberately absent.
 LINKS_COMMON=(
-    "$HOME/.vimrc|$REPO_ROOT/config/.vimrc"
+    "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.bashrc|$REPO_ROOT/config/.bashrc"
     "$HOME/.gitconfig|$REPO_ROOT/config/.gitconfig"
-    "$HOME/.tmux.conf|$REPO_ROOT/config/.tmux.conf"
-    "$HOME/.config/nvim|$REPO_ROOT/config/nvim"
+    "$HOME/.gitconfig.common|$SHARED_ROOT/config/.gitconfig"
+    "$HOME/.tmux.conf|$SHARED_ROOT/config/.tmux.conf"
+    "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
+
+    # Claude Code's per-directory memory does not carry between sibling working
+    # directories, so instructions that must always apply cannot live there.
+    # This file loads in every session whatever the cwd. It claims to hold
+    # everywhere, so it is linked in every zone rather than on Windows and mac
+    # only, which is what it did before.
+    "$HOME/.claude/CLAUDE.md|$SHARED_ROOT/config/claude/CLAUDE.md"
+    "$HOME/.claude/settings.json|$SHARED_ROOT/config/claude/settings.json"
+
+    "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
+
+    # The file is shared; only the location VS Code reads it from is per-OS.
+    "$HOME/.config/Code/User/settings.json|$SHARED_ROOT/config/vscode/settings.json"
+
     "$HOME/.config/kdeglobals|$REPO_ROOT/config/kdeglobals"
     "$HOME/.config/waybar|$REPO_ROOT/config/waybar"
 )

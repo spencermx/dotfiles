@@ -137,20 +137,20 @@ Re-export after changing it in the UI:
 
 ## Zone rule
 
-`setup.sh` writes only inside `mac/` and `$HOME`, and reads only from `mac/`.
-Every entry in `$LINKS` targets a file under `config/` — there is no path in
-this directory that reaches into a sibling OS directory.
+`setup.sh` writes only inside `$HOME`, and reads from `mac/` and `common/`.
+Every entry in `$LINKS` targets a file under `config/` except the two under
+`$SHARED_ROOT` — there is no path in this directory that reaches into a sibling
+*OS* directory.
 
-That includes the editor: `config/nvim/` and `config/.vimrc` are **mac's own
-copies**, not links to somewhere else. If a change should apply on another OS
-too, make it there as well; nothing propagates automatically, and that is the
-point.
+The editor is the exception: `config/nvim/` and `config/.vimrc` were byte-identical
+to the arch zone's and now live in `common/config/`. Editing them changes
+Linux too, deliberately. Everything else here is mac's own copy and propagates
+nowhere.
 
 Configs that differ from their Linux counterparts, for reference:
 
 | file | difference |
 |------|-----------|
-| `config/.tmux.conf` | `pbcopy` instead of `xclip`, plus Option+`hjkl` resize |
 | `config/.gitconfig` | invokes `gh` bare through PATH; the Linux copy hardcodes `/usr/bin/gh`, which is wrong under Homebrew |
 
 ## Shell

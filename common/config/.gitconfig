@@ -1,0 +1,18 @@
+# Shared by every zone. Linked to ~/.gitconfig.common and pulled into each
+# zone's .gitconfig with an [include].
+#
+# Only settings that are correct on every OS belong here. Credential helpers,
+# core.autocrlf and the editor differ per machine and stay in the zone file,
+# which is included after this one and therefore wins on any overlap.
+
+[user]
+	name = spencermx
+	email = 138399420+spencermx@users.noreply.github.com
+
+[init]
+	defaultBranch = master
+
+# ~ expands on every platform including Git for Windows, and the ignore file
+# itself is linked from common/config/git/ignore in all three zones.
+[core]
+	excludesfile = ~/.config/git/ignore

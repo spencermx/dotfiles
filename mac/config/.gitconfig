@@ -1,13 +1,13 @@
-# macOS git config.
+# macOS git config. Identity and shared defaults come from
+# common/config/.gitconfig, linked to ~/.gitconfig.common by setup.sh.
 #
-# Deliberately mac's own copy. The Linux equivalent hardcodes /usr/bin/gh
-# for the credential helper, and Homebrew installs gh to $(brew --prefix)/bin.
+# Deliberately mac's own copy of the credential block. The Arch equivalent
+# hardcodes /usr/bin/gh, and Homebrew installs gh to $(brew --prefix)/bin.
 # Here gh is invoked bare and resolved through PATH, which works on both Apple
 # Silicon (/opt/homebrew) and Intel (/usr/local).
 
-[user]
-	name = spencermx
-	email = 138399420+spencermx@users.noreply.github.com
+[include]
+	path = ~/.gitconfig.common
 
 # The empty first helper clears any helper inherited from system config --
 # without it, osxkeychain runs first and gh never gets asked.
@@ -17,9 +17,3 @@
 [credential "https://gist.github.com"]
 	helper =
 	helper = !gh auth git-credential
-
-[core]
-	excludesfile = ~/.config/git/ignore
-
-[init]
-	defaultBranch = master
