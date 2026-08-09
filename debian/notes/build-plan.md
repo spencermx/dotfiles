@@ -202,17 +202,32 @@ committing — the point is not tidiness, it is that graphical software cannot
 execute regardless of how it later arrives.
 
 ### Base, firmware, boot
+Confirmed on the actual machine (`lspci`, `/proc/cpuinfo`): AMD Ryzen 5 PRO
+7530U, MediaTek MT7922 wifi, Realtek gigabit ethernet.
+
 ```
-linux-image-amd64 firmware-linux firmware-iwlwifi firmware-realtek
-firmware-atheros firmware-misc-nonfree intel-microcode amd64-microcode
+linux-image-amd64 firmware-linux firmware-mediatek firmware-realtek
+firmware-amd-graphics firmware-misc-nonfree amd64-microcode
 grub-efi-amd64 efibootmgr cryptsetup lvm2
 ```
-Install both microcode packages and let the wrong one no-op; which ThinkPad
-L14 generation this is decides Intel vs AMD and it is not worth a reinstall to
-get wrong. **Confirm the wifi chipset from the installer shell** (`lspci -nn |
-grep -i net`) before finishing the install — trixie's installer includes
-non-free-firmware by default, but "included" is not "the right blob for your
-card".
+
+- **`firmware-mediatek`** drives the MT7922 through `mt7921e`, in-kernel since
+  5.15 and trixie ships 6.12. It is in `non-free-firmware`, which the official
+  trixie installer includes by default.
+- **`firmware-amd-graphics` is not optional, despite there being no display
+  server.** On AMD laptops the backlight is exposed as
+  `/sys/class/backlight/amdgpu_bl0` by the `amdgpu` *kernel* driver, which
+  will not initialise without its firmware. Missing it means no backlight
+  device, nothing for `brightnessctl` to write to, and screen brightness
+  frozen wherever the firmware left it — on a battery machine used in varying
+  light, for the life of the machine.
+- **`amd64-microcode`**, not `intel-microcode`. Ryzen 5 PRO 7530U is Zen 3.
+- Realtek ethernet runs on in-kernel `r8169` and needs no blob. It is the
+  fallback if wifi ever fails to come up, including during the install.
+
+`ls /sys/class/net` showing only `lo` at the installer's first screen is
+expected — network drivers are not loaded until the "detect network hardware"
+step.
 
 ### System services
 ```
