@@ -264,6 +264,11 @@ procps lsof strace htop ncdu bat brightnessctl acpi
   `batcat`. Handled in the dotfiles shell config, not by a root-owned symlink
   in `/usr/local/bin`, so it stays fixable after the gate.
 
+Confirm `lsd` and `fzf` actually exist in trixie before relying on them — the
+shell config aliases `ls`/`ll` straight to `lsd`, so if it is missing the
+prompt is broken on a machine that can no longer install it. Either is
+substitutable with a user-local binary if apt does not have it.
+
 ### Deliberately absent
 No `xclip`/`wl-clipboard` (no display server to hold a selection), no audio
 stack, no fonts beyond console, no `openssh-server` (no remote rescue, which
@@ -314,8 +319,18 @@ release tarball into `~/.local/bin` rather than the apt package, so it can be
 updated after the gate. Authenticate with `gh auth login --with-token` from a
 PAT generated on the desktop; the browser flow is not needed.
 
+`yazi` goes the same way, and additionally because it may not be packaged in
+trixie at all — it is recent enough that the freeze may have missed it, and
+"apt says no" is not a thing that can be worked around after the gate. It is a
+TUI, so the absence of a display server is irrelevant to it. Take the upstream
+release binary into `~/.local/bin`; the shell's `e()` wrapper depends on it.
+
 **General rule: anything that might need updating post-gate goes user-local.**
 apt-installed software gets security patches and nothing else, forever.
+
+To summarise what does *not* come from apt: `claude`, `node` (nvm), `gh`,
+`nvim`, `yazi`, and Mason's LSP servers. All in `$HOME`, all updatable with no
+root, forever.
 
 ### 3. Joining a new wifi network after the gate
 
@@ -409,7 +424,8 @@ Root exists for steps 1–13. It does not exist after step 15.
  8  tlp enabled; fwupd run once
  9  GRUB superuser password set; update-grub; passphrase written on paper
 10  ssh-keygen; pubkey pasted into GitHub from the desktop
-11  Claude CLI via native installer; nvm + node; gh tarball to ~/.local/bin
+11  User-local binaries into ~/.local/bin: claude (native installer),
+      nvm + node, gh, nvim, yazi
 12  Authenticate Claude CLI (paste-code flow); gh auth login --with-token
 13  Clone repos; run debian/setup.sh --dry-run then for real
 14  Godot binary: unzip, `--headless --version`, record the result
@@ -427,6 +443,7 @@ failure means fix it now, while root still exists.
 [ ] git push to a real repo over SSH
 [ ] claude: /logout, then log back in via paste-code. Re-auth REHEARSED
 [ ] nvim opens, treesitter parsers compile, no missing-compiler error
+[ ] e() launches yazi and follows it on quit; ls/ll resolve (lsd present)
 [ ] tmux scrollback works (there is no console scrollback)
 [ ] brightnessctl changes brightness without a password
 [ ] systemctl reboot works without a password
