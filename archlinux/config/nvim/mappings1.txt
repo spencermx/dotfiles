@@ -1,0 +1,298 @@
+n  <Space>q    *@<Lua 389: /usr/share/nvim/runtime/lua/vim/diagnostic.lua:2445>
+n  <Space>D    *@<Lua 374: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:298>
+n  <Space>f    *@<Lua 385: ~/.config/nvim/lua/plugins/mason-lspconfig.lua:32>
+n  <Space>ci   *@<Lua 384: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:1222>
+n  <Space>rn   *@<Lua 383: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:643>
+n  <Space>wl   *@<Lua 382: ~/.config/nvim/lua/plugins/mason-lspconfig.lua:26>
+n  <Space>wr   *@<Lua 381: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:989>
+n  <Space>wa   *@<Lua 380: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:968>
+x  <Space>sr   *@<Lua 353: ~/.local/share/nvim/lazy/nvim-treesitter/lua/nvim-treesitter/incremental_selection.lua:127>
+                 Shrink selection to previous named node
+x  <Space>se   *@<Lua 352: ~/.local/share/nvim/lazy/nvim-treesitter/lua/nvim-treesitter/incremental_selection.lua:59>
+                 Increment selection to named node
+n  <Space>ss   *@<Lua 351: ~/.local/share/nvim/lazy/nvim-treesitter/lua/nvim-treesitter/incremental_selection.lua:15>
+                 Start selecting nodes with nvim-treesitter
+x  <Space>sb   *@<Lua 350: ~/.local/share/nvim/lazy/nvim-treesitter/lua/nvim-treesitter/incremental_selection.lua:59>
+                 Increment selection to surrounding scope
+n  K           *@<Lua 386: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:49>
+n  [d          *@<Lua 387: /usr/share/nvim/runtime/lua/vim/diagnostic.lua:1285>
+o  []          *@<Lua 349: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @class.outer
+x  []          *@<Lua 348: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @class.outer
+n  []          *@<Lua 347: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @class.outer
+o  [M          *@<Lua 346: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @function.outer
+x  [M          *@<Lua 345: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @function.outer
+n  [M          *@<Lua 344: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous end @function.outer
+o  [m          *@<Lua 343: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @function.outer
+x  [m          *@<Lua 342: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @function.outer
+n  [m          *@<Lua 341: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @function.outer
+o  [[          *@<Lua 340: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @class.outer
+x  [[          *@<Lua 339: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @class.outer
+n  [[          *@<Lua 338: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto previous start @class.outer
+n  ]d          *@<Lua 388: /usr/share/nvim/runtime/lua/vim/diagnostic.lua:1432>
+o  ][          *@<Lua 337: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @class.outer
+x  ][          *@<Lua 336: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @class.outer
+n  ][          *@<Lua 335: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @class.outer
+o  ]M          *@<Lua 334: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @function.outer
+x  ]M          *@<Lua 333: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @function.outer
+n  ]M          *@<Lua 332: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next end @function.outer
+o  ]]          *@<Lua 331: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @class.outer
+x  ]]          *@<Lua 330: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @class.outer
+n  ]]          *@<Lua 329: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @class.outer
+o  ]m          *@<Lua 328: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @function.outer
+x  ]m          *@<Lua 327: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @function.outer
+n  ]m          *@<Lua 326: ~/.local/share/nvim/lazy/nvim-treesitter-textobjects/lua/nvim-treesitter/textobjects/attach.lua:44>
+                 Goto next start @function.outer
+x  ab          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@block.outer','textobjects','x')<CR>
+                 Select textobject @block.outer
+o  ab          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@block.outer','textobjects','o')<CR>
+                 Select textobject @block.outer
+x  af          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@function.outer','textobjects','x')<CR>
+                 Select textobject @function.outer
+o  af          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@function.outer','textobjects','o')<CR>
+                 Select textobject @function.outer
+n  gr          *@<Lua 378: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:767>
+n  gi          *@<Lua 377: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:305>
+n  gd          *@<Lua 376: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:292>
+n  gD          *@<Lua 375: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:286>
+x  ib          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@block.inner','textobjects','x')<CR>
+                 Select textobject @block.inner
+o  ib          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@block.inner','textobjects','o')<CR>
+                 Select textobject @block.inner
+x  if          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@function.inner','textobjects','x')<CR>
+                 Select textobject @function.inner
+o  if          *@<Cmd>lua require'nvim-treesitter.textobjects.select'.select_textobject('@function.inner','textobjects','o')<CR>
+                 Select textobject @function.inner
+n  <C-K>       *@<Lua 379: /usr/share/nvim/runtime/lua/vim/lsp/buf.lua:350>
+s  <Tab>       * <Lua 25: vim/_defaults.lua:0>
+                 vim.snippet.jump if active, otherwise <Tab>
+n  <Space>?    * <Lua 252: ~/source/repos/linux/config/nvim/init.lua:16>
+                 Show LSP keymap notes
+n  <Space>de   * <Lua 233: ~/.config/nvim/lua/plugins/nvim-dap-ui.lua:17>
+                 Evaluate variable under cursor
+n  <Space>gw   * :Gwrite<CR>
+                 Git Add Current Buffer
+n  <Space>gd   * :Gdiffsplit<CR>
+                 Git Diff Split
+n  <Space>gl   * :Glog<CR>
+                 Git Log (Quickfix)
+n  <Space>gp   * :Git push<CR>
+                 Git Push
+n  <Space>gc   * :Gcommit<CR>
+                 Git Commit
+n  <Space>gs   * :G<CR>
+                 Git Status
+n  <Space>Fo   * :FormatWrite<CR>
+n  <Space>fo   * :Format<CR>
+n  <Space>u    * :UndotreeToggle<CR>
+n  <Space>dt   * :DiffviewToggleFiles<CR>
+n  <Space>dc   * :DiffviewClose<CR>
+n  <Space>do   * :DiffviewOpen<CR>
+n  <Space>f    * :NvimTreeFindFile<CR>
+n  <Space>e    * :NvimTreeToggle<CR>
+n  <Space>/    * <Lua 149: ~/.local/share/nvim/lazy/telescope.nvim/lua/telescope/builtin/init.lua:546>
+n  <Space>fh   * <Lua 148: ~/.local/share/nvim/lazy/telescope.nvim/lua/telescope/builtin/init.lua:546>
+n  <Space>fb   * <Lua 147: ~/.local/share/nvim/lazy/telescope.nvim/lua/telescope/builtin/init.lua:546>
+n  <Space>fg   * <Lua 146: ~/.local/share/nvim/lazy/telescope.nvim/lua/telescope/builtin/init.lua:546>
+n  <Space>ff   * <Lua 145: ~/.local/share/nvim/lazy/telescope.nvim/lua/telescope/builtin/init.lua:546>
+n  <Space>dr   * <Lua 101: ~/.config/nvim/lua/plugins/nvim-dap.lua:259>
+                 DAP Open REPL
+n  <Space>B    * <Lua 100: ~/.config/nvim/lua/plugins/nvim-dap.lua:258>
+                 DAP Set Conditional Breakpoint
+n  <Space>c    * <Lua 99: ~/.config/nvim/lua/plugins/nvim-dap.lua:257>
+                 DAP Clear All Breakpoints
+n  <Space>b    * <Lua 98: ~/.config/nvim/lua/plugins/nvim-dap.lua:256>
+                 DAP Toggle Breakpoint
+n  <Space>a    * <Lua 88: ~/.local/share/nvim/site/pack/lazy/start/lazy.nvim/lua/lazy/core/handler/keys.lua:121>
+                 Toggle Aerial Sidebar
+n  <Space>mu   * <Lua 34: ~/.config/nvim/lua/core/options.lua:111>
+                 Save, run update.py, reload
+n  <Space>l    * :e<CR>
+n  <Space>n    * <Lua 33: ~/.config/nvim/lua/core/options.lua:89>
+                 Toggle line numbers (off / relative)
+n  <Space>qc   * <Cmd>cclose<CR>
+n  <Space>qo   * <Cmd>copen<CR>
+n  <Space>h    * :nohlsearch<CR>
+n  <Space>x    * :q<CR>
+n  <Space>s    * :w<CR>
+x  #           * <Lua 8: vim/_defaults.lua:0>
+                 :help v_#-default
+o  %             <Plug>(MatchitOperationForward)
+x  %             <Plug>(MatchitVisualForward)
+n  %             <Plug>(MatchitNormalForward)
+n  &           * :&&<CR>
+                 :help &-default
+x  *           * <Lua 3: vim/_defaults.lua:0>
+                 :help v_star-default
+x  @           * mode() ==# 'V' ? ':normal! @'.getcharstr().'<CR>' : '@'
+                 :help v_@-default
+x  Q           * mode() ==# 'V' ? ':normal! @<C-R>=reg_recorded()<CR><CR>' : 'Q'
+                 :help v_Q-default
+n  Y           * y$
+                 :help Y-default
+o  [%            <Plug>(MatchitOperationMultiBackward)
+x  [%            <Plug>(MatchitVisualMultiBackward)
+n  [%            <Plug>(MatchitNormalMultiBackward)
+n  [<Space>    * <Lua 59: vim/_defaults.lua:0>
+                 Add empty line above cursor
+n  [B          * <Lua 57: vim/_defaults.lua:0>
+                 :brewind
+n  [b          * <Lua 55: vim/_defaults.lua:0>
+                 :bprevious
+n  [<C-T>      * <Lua 53: vim/_defaults.lua:0>
+                  :ptprevious
+n  [T          * <Lua 51: vim/_defaults.lua:0>
+                 :trewind
+n  [t          * <Lua 49: vim/_defaults.lua:0>
+                 :tprevious
+n  [A          * <Lua 47: vim/_defaults.lua:0>
+                 :rewind
+n  [a          * <Lua 45: vim/_defaults.lua:0>
+                 :previous
+n  [<C-L>      * <Lua 43: vim/_defaults.lua:0>
+                 :lpfile
+n  [L          * <Lua 41: vim/_defaults.lua:0>
+                 :lrewind
+n  [l          * <Lua 39: vim/_defaults.lua:0>
+                 :lprevious
+n  [<C-Q>      * <Lua 37: vim/_defaults.lua:0>
+                 :cpfile
+n  [Q          * <Lua 35: vim/_defaults.lua:0>
+                 :crewind
+n  [q          * <Cmd>cprev<CR>
+n  [D          * <Lua 31: vim/_defaults.lua:0>
+                 Jump to the first diagnostic in the current buffer
+n  [d          * <Lua 29: vim/_defaults.lua:0>
+                 Jump to the previous diagnostic in the current buffer
+o  ]%            <Plug>(MatchitOperationMultiForward)
+x  ]%            <Plug>(MatchitVisualMultiForward)
+n  ]%            <Plug>(MatchitNormalMultiForward)
+n  ]<Space>    * <Lua 60: vim/_defaults.lua:0>
+                 Add empty line below cursor
+n  ]B          * <Lua 58: vim/_defaults.lua:0>
+                 :blast
+n  ]b          * <Lua 56: vim/_defaults.lua:0>
+                 :bnext
+n  ]<C-T>      * <Lua 54: vim/_defaults.lua:0>
+                 :ptnext
+n  ]T          * <Lua 52: vim/_defaults.lua:0>
+                 :tlast
+n  ]t          * <Lua 50: vim/_defaults.lua:0>
+                 :tnext
+n  ]A          * <Lua 48: vim/_defaults.lua:0>
+                 :last
+n  ]a          * <Lua 46: vim/_defaults.lua:0>
+                 :next
+n  ]<C-L>      * <Lua 44: vim/_defaults.lua:0>
+                 :lnfile
+n  ]L          * <Lua 42: vim/_defaults.lua:0>
+                 :llast
+n  ]l          * <Lua 40: vim/_defaults.lua:0>
+                 :lnext
+n  ]<C-Q>      * <Lua 38: vim/_defaults.lua:0>
+                 :cnfile
+n  ]Q          * <Lua 36: vim/_defaults.lua:0>
+                 :clast
+n  ]q          * <Cmd>cnext<CR>
+n  ]D          * <Lua 30: vim/_defaults.lua:0>
+                 Jump to the last diagnostic in the current buffer
+n  ]d          * <Lua 28: vim/_defaults.lua:0>
+                 Jump to the next diagnostic in the current buffer
+x  a%            <Plug>(MatchitVisualTextObject)
+o  g%            <Plug>(MatchitOperationBackward)
+x  g%            <Plug>(MatchitVisualBackward)
+n  g%            <Plug>(MatchitNormalBackward)
+n  gO          * <Lua 21: vim/_defaults.lua:0>
+                 vim.lsp.buf.document_symbol()
+n  grt         * <Lua 20: vim/_defaults.lua:0>
+                 vim.lsp.buf.type_definition()
+n  gri         * <Lua 19: vim/_defaults.lua:0>
+                 vim.lsp.buf.implementation()
+n  grr         * <Lua 18: vim/_defaults.lua:0>
+                 vim.lsp.buf.references()
+x  gra         * <Lua 17: vim/_defaults.lua:0>
+                 vim.lsp.buf.code_action()
+n  gra         * <Lua 16: vim/_defaults.lua:0>
+                 vim.lsp.buf.code_action()
+n  grn         * <Lua 15: vim/_defaults.lua:0>
+                 vim.lsp.buf.rename()
+o  gc          * <Lua 14: vim/_defaults.lua:0>
+                 Comment textobject
+n  gcc         * <Lua 13: vim/_defaults.lua:0>
+                 Toggle comment line
+x  gc          * <Lua 12: vim/_defaults.lua:0>
+                 Toggle comment
+n  gc          * <Lua 11: vim/_defaults.lua:0>
+                 Toggle comment
+x  gx          * <Lua 10: vim/_defaults.lua:0>
+                 Opens filepath or URI under cursor with the system handler (file explorer, web browser, …)
+n  gx          * <Lua 9: vim/_defaults.lua:0>
+                 Opens filepath or URI under cursor with the system handler (file explorer, web browser, …)
+n  y<C-G>      & :<C-U>call setreg(v:register, fugitive#Object(@%))<CR>
+x  <Plug>(MatchitVisualTextObject)   <Plug>(MatchitVisualMultiBackward)o<Plug>(MatchitVisualMultiForward)
+o  <Plug>(MatchitOperationMultiForward) * :<C-U>call matchit#MultiMatch("W",  "o")<CR>
+o  <Plug>(MatchitOperationMultiBackward) * :<C-U>call matchit#MultiMatch("bW", "o")<CR>
+x  <Plug>(MatchitVisualMultiForward) * :<C-U>call matchit#MultiMatch("W",  "n")<CR>m'gv``
+x  <Plug>(MatchitVisualMultiBackward) * :<C-U>call matchit#MultiMatch("bW", "n")<CR>m'gv``
+n  <Plug>(MatchitNormalMultiForward) * :<C-U>call matchit#MultiMatch("W",  "n")<CR>
+n  <Plug>(MatchitNormalMultiBackward) * :<C-U>call matchit#MultiMatch("bW", "n")<CR>
+o  <Plug>(MatchitOperationBackward) * :<C-U>call matchit#Match_wrapper('',0,'o')<CR>
+o  <Plug>(MatchitOperationForward) * :<C-U>call matchit#Match_wrapper('',1,'o')<CR>
+x  <Plug>(MatchitVisualBackward) * :<C-U>call matchit#Match_wrapper('',0,'v')<CR>m'gv``
+x  <Plug>(MatchitVisualForward) * :<C-U>call matchit#Match_wrapper('',1,'v')<CR>:if col("''") != col("$") | exe ":normal! m'" | endif<CR>gv``
+n  <Plug>(MatchitNormalBackward) * :<C-U>call matchit#Match_wrapper('',0,'n')<CR>
+n  <Plug>(MatchitNormalForward) * :<C-U>call matchit#Match_wrapper('',1,'n')<CR>
+n  <Plug>fugitive: & <Nop>
+n  <Plug>fugitive:y<C-G> & :<C-U>call setreg(v:register, fugitive#Object(@%))<CR>
+n  <M-t>       * <Cmd>execute v:count . "ToggleTerm"<CR>
+                 Toggle Terminal
+n  <Plug>PlenaryTestFile * :lua require('plenary.test_harness').test_file(vim.fn.expand("%:p"))<CR>
+n  <C-P>       * <Lua 97: ~/.config/nvim/lua/plugins/nvim-dap.lua:255>
+                 DAP Step Out
+n  <C-M>       * <Lua 93: ~/.config/nvim/lua/plugins/nvim-dap.lua:254>
+                 DAP Step Into
+n  <C-N>       * <Lua 77: ~/.config/nvim/lua/plugins/nvim-dap.lua:253>
+                 DAP Step Over
+n  <F5>        * <Lua 61: ~/.config/nvim/lua/plugins/nvim-dap.lua:252>
+                 DAP Continue/Start
+n  <C-A>x      * :q<CR>
+n  <C-A>s      * <C-W>s
+n  <C-A>v      * <C-W>v
+n  <S-Up>      * <C-W>+
+n  <S-Down>    * <C-W>-
+n  <S-Right>   * <C-W>>
+n  <S-Left>    * <C-W><
+n  <C-K>       * <C-W>k
+n  <C-J>       * <C-W>j
+n  <C-H>       * <C-W>h
+n  <C-W><C-D>    <C-W>d
+                 Show diagnostics under the cursor
+n  <C-W>d      * <Lua 32: vim/_defaults.lua:0>
+                 Show diagnostics under the cursor
+s  <S-Tab>     * <Lua 27: vim/_defaults.lua:0>
+                 vim.snippet.jump if active, otherwise <S-Tab>
+s  <C-S>       * <Lua 23: vim/_defaults.lua:0>
+                 vim.lsp.buf.signature_help()
+n  <C-L>       * <C-W>l

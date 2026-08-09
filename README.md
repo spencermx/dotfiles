@@ -1,10 +1,11 @@
 # dotfiles
 
-Machine configuration for three operating systems. Each directory provisions
+Machine configuration for four operating systems. Each directory provisions
 one of them from scratch with a single script.
 
 ```
-linux/      Arch     ./setup.sh
+archlinux/  Arch     ./setup.sh
+debian/     Debian   ./setup.sh    text-only ThinkPad; see debian/README.md
 mac/        macOS    ./setup.sh
 windows/    Windows  .\setup.ps1
 ```
@@ -17,7 +18,8 @@ Clone, then run the script for the OS you are on:
 git clone https://github.com/spencermx/dotfiles.git ~/source/repos/dotfiles
 
 cd ~/source/repos/dotfiles/mac    && ./setup.sh --dry-run && ./setup.sh
-cd ~/source/repos/dotfiles/linux  && ./setup.sh --dry-run && ./setup.sh
+cd ~/source/repos/dotfiles/archlinux  && ./setup.sh --dry-run && ./setup.sh
+cd ~/source/repos/dotfiles/debian     && ./setup.sh --dry-run && ./setup.sh
 ```
 
 ```powershell
@@ -27,7 +29,7 @@ cd ~\source\repos\dotfiles\windows; .\setup.ps1 -DryRun; .\setup.ps1
 Each script refuses to run on the wrong OS, so there is no way to fire the
 wrong one by accident.
 
-## The three scripts do the same job
+## The scripts do the same job
 
 They were written at different times against different package managers, but
 they share a shape, and reading one teaches you the others:
@@ -41,11 +43,16 @@ they share a shape, and reading one teaches you the others:
 | **A health check that always runs** | verifies the machine rather than trusting the steps: links are real and live, declared packages are installed and current, expected commands resolve. Exits non-zero and names anything wrong. |
 | **Upgrades on every run** | installing what is missing is only half the job. A machine pinned to whatever was current on provisioning day is not set up. |
 
-| | linux | mac | windows |
-|-|-------|-----|---------|
-| packages | pacman | Homebrew | winget |
-| shell | bash | zsh | PowerShell |
-| phases | `packages` `links` `services` | `packages` `paths` `links` `defaults` `tools` | `Packages` `Env` `Path` `Links` |
+| | archlinux | debian | mac | windows |
+|-|-------|--------|-----|---------|
+| packages | pacman | apt | Homebrew | winget |
+| shell | bash | bash | zsh | PowerShell |
+| phases | `packages` `links` `services` | see below | `packages` `paths` `links` `defaults` `tools` | `Packages` `Env` `Path` `Links` |
+
+`debian/` is the odd one out and breaks two of the rules above deliberately: it
+has no display server, and it is provisioned once behind a one-way gate after
+which `sudo` is purged, so "re-runnable" applies only to the phases that need
+no root. Read [debian/README.md](debian/README.md) before touching it.
 
 ## The zones are independent
 
@@ -53,9 +60,9 @@ they share a shape, and reading one teaches you the others:
 than one place are separate copies, and a change to one does not propagate.
 
 This is deliberate and was arrived at the hard way. The editor config in
-`linux/config/nvim` and `mac/config/nvim` is the same 33 files, and it was
+`archlinux/config/nvim` and `mac/config/nvim` is the same 33 files, and it was
 briefly shared by pointing one at the other. That coupling meant a mac change
-edited the Linux config, and `mac/setup.sh` could not run unless `linux/`
+edited the Linux config, and `mac/setup.sh` could not run unless `archlinux/`
 existed. Two copies and an occasional manual sync is the cheaper problem.
 
 The same applies to `.gitattributes`: `windows/` pins `.ps1` to CRLF, `mac/`
@@ -78,8 +85,10 @@ editor.
 
 Each directory has its own README covering the parts that do not generalise:
 
-- [linux/README.md](linux/README.md) — two machines share it (desktop and an
+- [archlinux/README.md](archlinux/README.md) — two machines share it (desktop and an
   ASUS laptop), selected by DMI detection
+- [debian/README.md](debian/README.md) — a console-only ThinkPad with no X or
+  Wayland, and the ordered gate that ends in `sudo` being purged
 - [mac/README.md](mac/README.md) — Karabiner and AeroSpace are one keymap split
   across two programs, and the PATH ordering that Homebrew requires
 - [windows/README.md](windows/README.md) — why Visual Studio is excluded from

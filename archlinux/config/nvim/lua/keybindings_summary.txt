@@ -1,0 +1,116 @@
+NEOVIM KEYBINDINGS (Grouped by Plugin/Feature)
+----------------------------------------------
+
+1) CORE (Built-in / General)
+   - Leader Key: <Space>
+   - <leader>s        -> Save (:w)
+   - <leader>x        -> Quit (:q)
+   - <leader>h        -> Clear search highlights (:nohlsearch)
+
+   WINDOW MANAGEMENT
+   - Ctrl + h/j/k/l   -> Move focus left/down/up/right
+   - Shift + Left/Right/Down/Up -> Resize window horizontally/vertically
+   - <C-a>v           -> Vertical split
+   - <C-a>s           -> Horizontal split
+   - <C-a>x           -> Close current split (:q)
+
+   INSERT MODE HELPERS
+   - Alt + s          -> Ctrl + y (yank)
+   - Alt + d          -> Ctrl + e (end-of-line)
+
+----------------------------------------------
+2) NVIM-TREE (File Explorer)
+   - <leader>e        -> Toggle file tree
+   - <leader>f        -> Find current file in tree 
+                        (Note: Might conflict with <leader>f for LSP formatting)
+
+----------------------------------------------
+3) TELESCOPE (Fuzzy Finder)
+   - <leader>ff       -> Find files
+   - <leader>fg       -> Live grep
+   - <leader>fb       -> List open buffers
+   - <leader>fh       -> Help tags
+   - <leader>/        -> Fuzzy find in current buffer
+   (Within the Telescope prompt in Insert mode)
+   - Ctrl + j/k       -> Move selection down/up
+
+----------------------------------------------
+4) UNDOTREE
+   - <leader>u        -> Toggle UndoTree panel
+
+----------------------------------------------
+5) MASON / LSP (Language Server Protocol)
+   Core LSP Keybindings (Active on LSP Attach):
+   - gD               -> Go to Declaration
+   - gd               -> Go to Definition
+   - gi               -> Go to Implementation
+   - gr               -> Find References
+   - K                -> Hover documentation
+   - Ctrl + k         -> Signature help (Normal mode; may conflict w/ window nav)
+   - <leader>wa       -> Add workspace folder
+   - <leader>wr       -> Remove workspace folder
+   - <leader>wl       -> List workspace folders
+   - <leader>rn       -> Rename symbol
+   - <leader>ci       -> Code actions
+   - <leader>f        -> Format buffer (async)
+   - [d / ]d          -> Previous / next diagnostic
+   - <leader>D        -> Go to type definition
+   - <leader>q        -> Diagnostic -> location list
+   - :cc 1            -> go to quickfile file 1 
+   - :cc 2            -> go to quickfile file 2 
+
+   lsp-overloads (Enhanced Signature Help):
+   - Ctrl + j/k       -> Next/previous signature
+   - Ctrl + l/h       -> Next/previous parameter
+   - Alt + x          -> Close signature window
+
+----------------------------------------------
+6) FORMATTER
+   - <leader>fo       -> :Format
+   - <leader>Fo       -> :FormatWrite
+
+----------------------------------------------
+7) DIFFVIEW
+   - <leader>do       -> DiffviewOpen
+   - <leader>dc       -> DiffviewClose
+   - <leader>dt       -> DiffviewToggleFiles
+
+----------------------------------------------
+8) NVIM-DAP (Debugging)
+   - F5               -> Start/Continue debugging
+   - Ctrl + n         -> Step Over
+   - Ctrl + m         -> Step Into
+   - Ctrl + p         -> Step Out
+   - <leader>b        -> Toggle breakpoint
+   - <leader>c        -> Clear all breakpoints
+   - <leader>B        -> Conditional breakpoint
+   - <leader>dr       -> Open DAP REPL
+   - <leader>de       -> Evaluate variable under cursor, repeat this command again to 'step into' the variable
+
+----------------------------------------------
+9) NVIM-CMP (Autocomplete in Insert Mode)
+   - Ctrl + b/f       -> Scroll docs up/down
+   - Ctrl + Space     -> Manually trigger completion
+   - Ctrl + e         -> Abort completion
+   - <CR> (Enter)     -> Confirm selection
+   - <Tab>            -> Next item OR jump forward in snippet
+   - <S-Tab>          -> Previous item OR jump backward in snippet
+
+----------------------------------------------
+10) NVIM-TREESITTER (Syntax/Selection/Text Objects)
+    INCREMENTAL SELECTION
+    - gnn / grn / grc / grm
+                      -> Start / expand / scope / shrink selection
+
+    TEXT OBJECTS (Visual or Operator-pending mode)
+    - af / if         -> Around / inside function
+    - ac / ic         -> Around / inside class
+    - ab / ib         -> Around / inside block
+
+    MOVING BETWEEN FUNCTIONS/CLASSES
+    - ]m / [m         -> Next/previous function start
+    - ]M / [M         -> Next/previous function end
+    - ]] / [[         -> Next/previous class start
+    - ][ / []         -> Next/previous class end
+
+----------------------------------------------

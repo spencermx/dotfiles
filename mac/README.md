@@ -1,11 +1,11 @@
 # macOS
 
 macOS configuration and setup. One of three sibling OS directories in this
-repo, alongside `linux/` and `windows/`.
+repo, alongside `archlinux/` and `windows/`.
 
 **`mac/` is self-contained.** Everything it needs is under `mac/`, and nothing
 here reads a file from a sibling directory. You can clone this repo and run
-`mac/setup.sh` without `linux/` or `windows/` existing at all.
+`mac/setup.sh` without `archlinux/` or `windows/` existing at all.
 
 ```
 setup.sh    provisions the machine. package lists and config live at the top of it.

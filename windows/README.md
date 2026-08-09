@@ -1,7 +1,7 @@
 # Windows
 
 Windows configuration and setup. One of three sibling OS directories in this
-repo, alongside `linux/` and `mac/`.
+repo, alongside `archlinux/` and `mac/`.
 
 **`windows/` is self-contained.** Everything it needs is under `windows/`, and
 nothing here reads a file from a sibling directory.
