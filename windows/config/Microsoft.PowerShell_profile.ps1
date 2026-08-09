@@ -360,7 +360,7 @@ function Invoke-RepoPr {
     Write-Host ''
     # Three dots, not two: it diffs from the merge base, so the review shows what
     # the author changed and not whatever landed on base in the meantime.
-    Write-Host "  git diff origin/$base...HEAD"
+    Write-Host "  git diff origin/$base...HEAD" -ForegroundColor Cyan
     Write-Host ''
 
     Set-Location -LiteralPath $clone

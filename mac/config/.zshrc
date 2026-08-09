@@ -131,7 +131,7 @@ function repo() {
 			# will never type.
 			-b|-branch|--branch)
 				if [[ -z $2 ]]; then
-					print -ru2 -- 'repo: -b needs a branch name'
+					print -ru2 -- "${_repo_red}repo: -b needs a branch name${_repo_off}"
 					return 2
 				fi
 				forced=$2
@@ -219,11 +219,11 @@ function _repo_pr() {
 		num="${match[1]}"
 		slug=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
 		if [[ -z $slug ]]; then
-			print -ru2 -- 'Not inside a GitHub repo -- pass the full PR URL.'
+			print -ru2 -- "${_repo_red}Not inside a GitHub repo -- pass the full PR URL.${_repo_off}"
 			return 1
 		fi
 	else
-		print -ru2 -- "Could not read '$ref' as a PR URL or number -- see repo --help"
+		print -ru2 -- "${_repo_red}Could not read '$ref' as a PR URL or number -- see repo --help${_repo_off}"
 		return 1
 	fi
 
@@ -232,7 +232,7 @@ function _repo_pr() {
 	meta=$(gh pr view "$num" --repo "$slug" --json baseRefName,title,author \
 		-q '[.baseRefName, .title, .author.login] | @tsv' 2>/dev/null)
 	if [[ -z $meta ]]; then
-		print -ru2 -- "Could not read $slug#$num -- is gh authenticated for that host?"
+		print -ru2 -- "${_repo_red}Could not read $slug#$num -- is gh authenticated for that host?${_repo_off}"
 		return 1
 	fi
 	IFS=$'\t' read -r base title author <<< "$meta"
@@ -242,7 +242,7 @@ function _repo_pr() {
 	if [[ ! -d $clone ]]; then
 		print -r -- "First review of $slug -- cloning to $clone"
 		if ! gh repo clone "$slug" "$clone"; then
-			print -ru2 -- "Clone of $slug failed."
+			print -ru2 -- "${_repo_red}Clone of $slug failed.${_repo_off}"
 			return 1
 		fi
 	fi
@@ -261,7 +261,7 @@ function _repo_pr() {
 	if ! git -C "$clone" fetch --quiet origin \
 		"+refs/pull/$num/head:refs/remotes/origin/pr/$num" \
 		"+refs/heads/${base}:refs/remotes/origin/${base}"; then
-		print -ru2 -- "Could not fetch $slug#$num."
+		print -ru2 -- "${_repo_red}Could not fetch $slug#$num.${_repo_off}"
 		return 1
 	fi
 
@@ -274,7 +274,7 @@ function _repo_pr() {
 	# --detach because reviewing does not commit, and because a detached HEAD
 	# cannot block the next force-fetch of a ref it happens to have checked out.
 	if ! git -C "$clone" checkout --quiet --force --detach "refs/remotes/origin/pr/$num"; then
-		print -ru2 -- "Could not check out $slug#$num."
+		print -ru2 -- "${_repo_red}Could not check out $slug#$num.${_repo_off}"
 		return 1
 	fi
 
@@ -284,7 +284,7 @@ function _repo_pr() {
 	print -r -- ""
 	# Three dots, not two: it diffs from the merge base, so the review shows what
 	# the author changed and not whatever landed on base in the meantime.
-	print -r -- "  git diff origin/$base...HEAD"
+	print -r -- "  ${_repo_key}git diff origin/$base...HEAD${_repo_off}"
 	print -r -- ""
 
 	builtin cd -- "$clone" && code "$clone"
