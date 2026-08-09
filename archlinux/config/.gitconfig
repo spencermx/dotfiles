@@ -1,9 +1,13 @@
+# Identity and shared defaults come from common/config/.gitconfig, linked to
+# ~/.gitconfig.common by setup.sh. Only Arch-specific settings live here.
+
+[include]
+	path = ~/.gitconfig.common
+
+# The empty first helper clears any helper inherited from system config.
 [credential "https://github.com"]
 	helper =
 	helper = !/usr/bin/gh auth git-credential
 [credential "https://gist.github.com"]
-	helper = 
+	helper =
 	helper = !/usr/bin/gh auth git-credential
-[user]
-	email = 138399420+spencermx@users.noreply.github.com
-	name = spencermx

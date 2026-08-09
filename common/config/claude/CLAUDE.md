@@ -21,7 +21,7 @@ If a commit is already made with a trailer, strip it before pushing with
 `git commit --amend`, or after with `git push --force-with-lease`.
 
 Files documenting software actually in use are a different thing and are fine:
-`windows/setup/claude-code` is install notes and stays.
+`windows/setup/claude-code` and `mac/notes/` are install notes and stay.
 
 ## Answering
 

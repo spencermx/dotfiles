@@ -43,8 +43,8 @@ desktop.
 
 ## Zone rule
 
-`setup.sh` writes only inside `debian/` and `$HOME`, and reads only from
-`debian/`. `config/nvim`, `config/.vimrc` and `config/.tmux.conf` are this
-zone's own copies. A change here does not reach `archlinux/`, and that is the
-point — the tmux config in particular *must* differ, since there is no
-clipboard to integrate with.
+`setup.sh` writes only inside `$HOME`, and reads from `debian/` and `common/`.
+`config/.tmux.conf` is this zone's own copy and *must* differ — there is no
+clipboard to integrate with. `nvim` and `.vimrc` come from `common/config/`,
+the same files the arch and mac zones use. A change to a `debian/` file reaches
+nothing else; a change under `common/` reaches every zone.

@@ -468,8 +468,9 @@ reboot        # and confirm the checklist still passes
 
 `debian/` is a fresh zone, not a copy of `archlinux/`. That zone is Hyprland,
 waybar, plasma, firefox and pipewire — nothing in it applies to a machine with
-no display server. What carries over is `.vimrc`, `.tmux.conf`, `.gitconfig`
-and `config/nvim`, as **new copies**, per the repo's zone rule.
+no display server. `.vimrc` and `config/nvim` come from `common/config/` —
+link them through `$SHARED_ROOT`, do not copy. `.tmux.conf` and `.gitconfig`
+are **new copies** inside this zone, per the repo's zone rule.
 
 Three known conflicts to resolve while writing them:
 

@@ -81,7 +81,8 @@ and `/usr/sbin`. Those are personal documents and now live in the private
 
 | | |
 |-|-|
-| `.bashrc` `.gitconfig` `.tmux.conf` `.vimrc` | shell and tooling |
+| `.bashrc` `.gitconfig` `.tmux.conf` | shell and tooling |
+| `.vimrc` `nvim/` | editor — from `common/config/`, shared with every zone |
 | `nvim/` | 33 files — the same editor config the mac uses, as its own copy |
 | `hypr/` `hypr-asus/` | hyprland, per machine. `hypr/` also has `hyprpaper.conf` |
 | `alacritty/` `alacritty-4k/` | terminal, per machine |

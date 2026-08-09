@@ -67,6 +67,8 @@
       "Bash(brew --prefix*)",
       "Bash(sw_vers*)",
       "Bash(uname*)",
+      "Bash(cl *)",
+      "Bash(msbuild*)",
       "Bash(dotnet build*)",
       "Bash(dotnet test*)",
       "Bash(dotnet list*)",
@@ -78,7 +80,26 @@
       "Bash(go test*)",
       "Bash(go vet*)",
       "Bash(scripts/build.sh*)",
-      "Bash(scripts/run_tests.sh*)"
+      "Bash(scripts/run_tests.sh*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-Item*)",
+      "PowerShell(Get-ItemProperty*)",
+      "PowerShell(Test-Path*)",
+      "PowerShell(Get-Command*)",
+      "PowerShell(Get-FileHash*)",
+      "PowerShell(Select-String*)",
+      "PowerShell(Measure-Object*)",
+      "PowerShell(Resolve-Path*)",
+      "PowerShell(Get-Location*)",
+      "PowerShell(git status*)",
+      "PowerShell(git log*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git show*)",
+      "PowerShell(git branch*)",
+      "PowerShell(git push origin*)",
+      "PowerShell(cmd /c \"scripts\\build.bat\"*)",
+      "PowerShell(cmd /c \"scripts\\run_tests.bat\"*)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
@@ -87,7 +108,8 @@
       "Bash(git push --mirror*)",
       "Bash(git push --delete*)",
       "Bash(git update-ref -d*)",
-      "Bash(sudo rm*)"
+      "Bash(sudo rm*)",
+      "PowerShell(Remove-Item -Recurse -Force $env:USERPROFILE*)"
     ],
     "ask": [
       "Bash(git push --force*)",
@@ -102,7 +124,9 @@
       "Bash(brew cleanup*)",
       "Bash(defaults write*)",
       "Bash(defaults delete*)",
-      "Bash(sudo*)"
+      "Bash(sudo*)",
+      "PowerShell(git push --force*)",
+      "PowerShell(Remove-Item*)"
     ],
     "defaultMode": "default"
   },

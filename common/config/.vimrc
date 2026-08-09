@@ -87,6 +87,10 @@ vnoremap <A-k> :m '<-2<CR>gv=gv
 " --- Clipboard ---
 set clipboard=unnamed " Use system clipboard by default
 
+" --- netrw ---
+let g:netrw_localcopydircmd = 'cp -r'
+let g:netrw_localrmdir = '/usr/bin/rm -rf'
+
 " Quick save and quit
 nnoremap <leader>s :w<CR>
 nnoremap <leader>q :q<CR>

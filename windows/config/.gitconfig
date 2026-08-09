@@ -1,6 +1,8 @@
-[user]
-	email = 138399420+spencermx@users.noreply.github.com
-	name = spencermx
+# Identity and shared defaults come from common/config/.gitconfig, linked to
+# ~/.gitconfig.common by setup.ps1. Only Windows-specific settings live here.
+
+[include]
+	path = ~/.gitconfig.common
 
 [credential]
 	helper = manager
@@ -9,6 +11,3 @@
 	autocrlf = false
 	longpaths = true
 	editor = vim
-
-[init]
-	defaultBranch = master
