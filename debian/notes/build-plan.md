@@ -132,6 +132,25 @@ unattended-upgrade --dry-run --debug            # must list origins, not error
 systemctl list-timers apt-daily\*
 ```
 
+## Which image
+
+`debian-13.x.0-amd64-netinst.iso`, current point release, from debian.org.
+Verify SHA256SUMS and its GPG signature before writing.
+
+- **trixie is Debian 13, current stable.** Not testing, not sid — stable is
+  what carries the security-only update stream that unattended-upgrades needs.
+- **Not a live image.** Live ISOs boot a desktop and install it with Calamares.
+  netinst runs the classic installer, which is where tasksel can be left with
+  nothing but "standard system utilities" selected.
+- **Ignore "unofficial non-free-firmware" images.** That was Debian 11 and
+  earlier, and still dominates search results. Since 12 the firmware is in the
+  official image.
+
+netinst pulls packages over the network during the install, so the network
+must work *in the installer*. The L14's RJ45 is the fallback if wifi firmware
+does not bring the card up — have a cable ready. That is also the moment to
+run `lspci -nn | grep -i net` from the installer shell and record the chipset.
+
 ## Package list
 
 Nothing here pulls X or Wayland. Check with
