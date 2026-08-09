@@ -413,7 +413,11 @@ verify() {
     step 'Health check'
 
     local entry link target short c
-    for entry in "${LINKS_COMMON[@]}" $(machine_links); do
+    # Read line by line rather than `for entry in ... $(machine_links)`. That
+    # form word-splits, so a link path containing a space would be checked as
+    # two broken half-paths. phase_links already reads it this way.
+    while IFS= read -r entry; do
+        [ -n "$entry" ] || continue
         split_pair "$entry"
         link="$PAIR_L"; target="$PAIR_R"
         short="$(tilde "$link")"
@@ -430,7 +434,10 @@ verify() {
         else
             problem; warn "missing            $short"
         fi
-    done
+    done <<EOF
+$(printf '%s\n' "${LINKS_COMMON[@]}")
+$(machine_links)
+EOF
 
     if has pacman; then
         local missing="" mcount=0 p
