@@ -92,24 +92,35 @@ group. Purging the `sudo` **package** does not empty the `sudo` **group**.
 If the account stays in that group, `pkexec` grants root for the user's own
 password after `sudo` is gone. Whole gate bypassed.
 
-```sh
-deluser <user> sudo         # before the gate, and verify with `id`
-```
+On this machine the account was never added to that group, because Debian only
+does so when the root password is left blank. Verify with `id` rather than
+assume; if it ever appears there, `deluser <user> sudo` removes it.
 
 With root locked and the account in no admin group, polkit has no identity to
 authenticate as and `pkexec` fails closed. That is durable — unlike
 `chmod u-s /usr/bin/pkexec`, which a polkit package update from
 unattended-upgrades silently restores.
 
-## Purge mechanism
+## Purge mechanism — superseded: sudo was never installed
 
-`apt purge sudo`, not `rm /usr/bin/sudo`.
+The build took the root-password path at install time rather than the blank
+one, so Debian did not install `sudo` and did not put the user in the `sudo`
+group. All build work is done from `su -`.
 
-`rm` leaves dpkg believing the package is installed and correct. The next
-security update of `sudo` — delivered by the unattended-upgrades that is
-deliberately being left armed — unpacks the binary again and quietly reopens
-the door. `apt purge` removes the binary, `/etc/sudoers`, and `/etc/sudoers.d`,
-and leaves no package for a future upgrade to restore.
+That is better than installing sudo and purging it later, and the difference
+is not cosmetic:
+
+- there is no `sudo` package on disk for a future unattended-upgrade to
+  unpack again
+- nothing has to be removed at the gate, so the gate cannot half-fail
+- the user is in no admin group, so `pkexec` has no identity to authenticate
+  against and fails closed without any action being taken
+
+The gate reduces to locking root. Keep the reasoning below anyway: if this
+machine is ever rebuilt down the blank-root-password path, `apt purge sudo` is
+the right removal and `rm /usr/bin/sudo` is not — `rm` leaves dpkg believing
+the package is installed, and the next security update of `sudo` unpacks the
+binary again and quietly reopens the door.
 
 ### `passwd -l root` vs `usermod --expiredate 1`
 
@@ -125,14 +136,16 @@ stage, which also covers auth paths that present no password (an SSH key, had
 `openssh-server` been installed). Neither stops `systemd` from starting
 root-owned units, and that is exactly the property the build depends on.
 
-Full gate sequence:
+Full gate sequence, as this machine is actually built:
 
 ```sh
-deluser <user> sudo
-apt purge sudo
 passwd -l root
 usermod --expiredate 1 root
 ```
+
+`sudo` is not installed and the user is in no admin group, so there is nothing
+to purge and nothing to remove from a group. Confirm both rather than assume:
+`command -v sudo` finds nothing, and `id` shows no `sudo` group.
 
 ## unattended-upgrades after the purge — confirmed, with conditions
 
@@ -472,8 +485,6 @@ failure means fix it now, while root still exists.
 Only then:
 
 ```
-deluser <user> sudo
-apt purge sudo
 passwd -l root
 usermod --expiredate 1 root
 reboot        # and confirm the checklist still passes
