@@ -3,7 +3,7 @@
 `config/.tmux.conf` is mac's own copy. Two deliberate differences from the
 Linux config it started as:
 
-| | mac | linux |
+| | mac | archlinux |
 |-|-----|-------|
 | copy-mode yank | `pbcopy` | `xclip -in -selection clipboard` |
 | Option + `hjkl` | resizes panes | not bound |
