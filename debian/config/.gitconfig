@@ -1,0 +1,20 @@
+# Identity and shared defaults come from common/config/.gitconfig, linked to
+# ~/.gitconfig.common by setup.sh. Only Debian-specific settings live here.
+
+[include]
+	path = ~/.gitconfig.common
+
+# gh is invoked bare through PATH, not as /usr/bin/gh like the arch copy: on
+# this machine gh is a user-local binary in ~/.local/bin so it can be updated
+# after sudo is gone, and there is no /usr/bin/gh to find.
+#
+# The empty first helper clears any helper inherited from system config.
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+
+[core]
+	editor = nvim
