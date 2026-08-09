@@ -7,6 +7,32 @@ root is locked. Anything needing root after that means a reinstall.
 This file is the pre-gate plan. It exists because the gate is one-way and the
 whole risk of the build is discovering a missing package after it closes.
 
+## Why Debian and not Arch
+
+There is already an Arch zone and an Arch machine, so this is a fair question
+and the answer is not preference. It is unattended security updates.
+
+Arch is rolling. There is no security-only channel — the only update is
+`pacman -Syu`, a full system upgrade — and Arch periodically *requires manual
+intervention*, announced on the front page and assuming a human is present.
+On a machine with no sudo and no root, one bad rolling upgrade, one keyring
+transition, or one missed announcement is a reinstall. `archlinux-keyring`
+going stale while the machine sits unused is its own version of the same trap.
+
+Debian stable is built for exactly the missing property: fixes that change
+behaviour as little as possible, delivered by a mechanism designed to run with
+nobody watching. trixie carries security support into roughly 2028, longer with
+LTS — the realistic life of this ThinkPad.
+
+The usual argument for Arch, fresher packages, does not apply here, because
+everything fast-moving on this box is user-local and updates without root
+anyway: Claude CLI, node via nvm, `gh`, Mason's LSP servers, and neovim. apt
+supplies only the slow, boring, security-patched base.
+
+If the update requirement were dropped — an appliance frozen until reinstall —
+Arch would be fine and `pacstrap base` is a cleaner minimal start than netinst
+plus tasksel. That is a coherent design. It is not this one.
+
 ## The gap that breaks the model
 
 **`sudo` purged with no bootloader password is not a restriction.** At the GRUB
@@ -197,11 +223,17 @@ scroll**. It is not a convenience here.
 
 ### Toolchain
 ```
-tmux neovim git openssh-client build-essential python3 curl wget
+tmux vim git openssh-client build-essential python3 curl wget
 ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
 man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
 procps lsof strace htop ncdu bat brightnessctl acpi
 ```
+- **neovim is not in this list on purpose.** It comes from the upstream
+  tarball into `~/.local/bin`, for the same reason as `claude` and `gh`: over
+  three years, plugins will outrun trixie's frozen nvim, and a frozen editor
+  on a machine whose whole job is editing code is the one piece of staleness
+  that actually hurts. apt's `vim` stays as the unbreakable fallback — if a
+  user-local nvim ever fails to start, there is still an editor.
 - `build-essential` is mandatory, not optional: nvim-treesitter compiles
   parsers with a C compiler on first run. Without it the editor config
   half-fails on a machine that can no longer install a compiler.
