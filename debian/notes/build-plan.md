@@ -4,6 +4,16 @@ Single-purpose portable machine for reading and writing code, git, and Claude
 Code CLI. No display server, ever. Provisioned once, then `sudo` is purged and
 root is locked. Anything needing root after that means a reinstall.
 
+**The bar.** Undoing a restriction on this machine must cost a physical trip
+and separate hardware — the way the Android tablet does, where escalation means
+retrieving a cable from the car, connecting to another machine, and running
+tooling. Not a password that is known, not a setting that is toggled. Reimaging
+from the recovery USB is an expected recovery path, not a failure.
+
+Every decision below is measured against that bar. A control that can be
+defeated from the chair, in seconds, without hardware, does not count as a
+control no matter how much configuration it involves.
+
 This file is the pre-gate plan. It exists because the gate is one-way and the
 whole risk of the build is discovering a missing package after it closes.
 
@@ -56,10 +66,17 @@ grub-mkpasswd-pbkdf2                 # produces grub.pbkdf2.sha512....
 update-grub
 ```
 
-Write the passphrase down, put the paper wherever the glovebox cable lives.
-That single step is what converts the purge from a speed bump into the
-appliance-grade barrier the design is asking for. Recovery stays possible
-(paper + physical access) without being possible at the moment of temptation.
+**Settled: the GRUB password is set.** It is not a hardening extra, it is the
+mechanism. The goal is a machine whose restriction costs a physical trip and
+separate hardware — retrieve a cable from the car, connect to another machine,
+run tooling — the way the Android tablet already works. Without a bootloader
+password the equivalent cost is one keystroke at a menu, sitting in the chair.
+Every other measure here is downstream of it.
+
+Generate a random passphrase, write it on paper, put the paper in the car with
+the ADB cable. That reproduces the tablet's friction exactly and keeps one
+non-destructive way back in. Discarding the paper instead is a coherent
+stricter choice: it leaves reimaging from the recovery USB as the only path.
 
 `set superusers` locks *editing* menu entries and the GRUB shell while leaving
 normal boot unattended — add `--unrestricted` to the default menuentry if a
@@ -366,8 +383,12 @@ whole job is editing GDScript blind.
    mitigation short of the recovery USB. Accepted cost, but know it.
 8. **Nothing outside git survives.** No backup path exists on this machine.
    Anything not committed and pushed is one reinstall from gone.
-9. **USB storage.** Mounting a stick needs root or `udisks2` plus a polkit
-   rule. Decide before the gate whether this machine ever reads a USB drive.
+9. **USB storage — settled: omitted.** Mounting removable media as a
+   non-root user would need `udisks2` plus a polkit rule, pre-gate. It is not
+   installed, on purpose: mountable removable storage is a route for software
+   and media to arrive on a machine designed so they cannot. Consequence,
+   accepted: after the gate this machine reads nothing from USB, and
+   everything arrives over the network through git.
 10. **Reboot/poweroff without sudo** works through logind's polkit action for
     an active local session — but verify it at the gate, because everything
     else about the purge depends on being able to reboot for kernel patches.
