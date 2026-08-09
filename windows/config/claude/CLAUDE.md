@@ -21,7 +21,7 @@ If a commit is already made with a trailer, strip it before pushing with
 `git commit --amend`, or after with `git push --force-with-lease`.
 
 Files documenting software actually in use are a different thing and are fine:
-`setup/claude-code` is install notes and stays.
+`windows/setup/claude-code` is install notes and stays.
 
 ## Answering
 
@@ -31,6 +31,11 @@ Y because Z, say if you'd rather Y" -- rather than an `AskUserQuestion` menu. A
 menu freezes the decision before the shape of the problem has settled; pushing
 back on a stated call is how the steering happens. Reserve the menu for cases
 where guessing wrong would waste real work.
+
+Answer the question that was asked, at the length it deserves. A request to
+review something is not a request for every finding you can generate -- lead
+with what changes a decision and stop. If a full inventory genuinely is the
+deliverable, it still gets an ordering, not a numbered dump.
 
 ## Tools
 
@@ -45,5 +50,5 @@ model; just work inside it.
 Before staging, compare `git diff --stat` against
 `git diff --stat --ignore-cr-at-eol`. If they disagree, an edit has rewritten LF
 files as CRLF and a ~100-line change is about to land as a whole-file diff.
-Convert back before committing. This repo is protected by `.gitattributes`;
+Convert back before committing. `dotfiles` is protected by `.gitattributes`;
 `drift2` has none and `core.autocrlf=false`, so nothing there catches it.

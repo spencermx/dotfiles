@@ -45,13 +45,10 @@ Read/Glob/Grep, which do not prompt -- never shell out for a loop of
 whole sequence into one call instead of several. Don't re-explain the permission
 model; just work inside it.
 
-## This repo
+## Line endings
 
-`linux/`, `mac/` and `windows/` are separate, self-contained zones inside one
-repository. Anything run from one of them writes only inside that directory and
-`$HOME`, and reads only from that directory.
-
-There are no shared files between them, deliberately. If a config exists in two
-zones it is two copies, and a change to one does not propagate. Do not
-"deduplicate" them by linking one zone at another -- that coupling was removed
-on purpose.
+Before staging, compare `git diff --stat` against
+`git diff --stat --ignore-cr-at-eol`. If they disagree, an edit has rewritten LF
+files as CRLF and a ~100-line change is about to land as a whole-file diff.
+Convert back before committing. `dotfiles` is protected by `.gitattributes`;
+`drift2` has none and `core.autocrlf=false`, so nothing there catches it.
