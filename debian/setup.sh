@@ -200,11 +200,22 @@ phase_packages() {
         fi
     done
 
+    # Report what apt does not have, then install everything else anyway. An
+    # earlier version aborted the whole phase here, which meant one bad name
+    # left the machine with none of the other thirty-nine packages.
     if [ ${#unavailable[@]} -gt 0 ]; then
         problem "not in the archive: ${unavailable[*]}"
         warned "install a user-local build instead, or fix sources.list -- do not skip and move on"
         fail_phase packages
-        return
+        local keep=() m
+        for m in "${missing[@]}"; do
+            local skip=0 u
+            for u in "${unavailable[@]}"; do
+                [ "$m" = "$u" ] && { skip=1; break; }
+            done
+            [ "$skip" -eq 0 ] && keep+=("$m")
+        done
+        missing=("${keep[@]}")
     fi
 
     if [ ${#missing[@]} -eq 0 ]; then
