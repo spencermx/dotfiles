@@ -97,7 +97,7 @@ TOOLS=(nvim gh yazi claude)
 # Debian's names, not the upstream ones: fd-find installs fdfind and bat
 # installs batcat. The shell config aliases them back; a script cannot see an
 # alias, so check for what is actually on disk.
-EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi)
+EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi nmcli)
 
 # Console font. The default 8x16 at 1080p on a 14" panel is punishing for a
 # full day, and /etc/default/console-setup needs root to change.
@@ -248,6 +248,74 @@ phase_packages() {
 # Phase: system
 #---------------------------------------------------------------------------
 
+# Hand the wifi card from ifupdown to NetworkManager, once. Guarded on the
+# device actually being unmanaged, so re-running this script can never tear down
+# a working connection -- after the first pass this is a no-op forever.
+nm_takeover() {
+    local wifi state ssid psk waited
+
+    if ! command -v nmcli >/dev/null 2>&1; then
+        problem "nmcli is missing -- network-manager did not install"
+        fail_phase system
+        return
+    fi
+
+    wifi="$(nmcli -t -f DEVICE,TYPE device status 2>/dev/null | awk -F: '$2=="wifi"{print $1; exit}')"
+    if [ -z "$wifi" ]; then
+        warned "no wifi device present -- nothing to hand over"
+        return
+    fi
+
+    state="$(nmcli -t -f DEVICE,STATE device status 2>/dev/null | awk -F: -v d="$wifi" '$1==d{print $2}')"
+    if [ "$state" != "unmanaged" ]; then
+        skipped "$wifi already NetworkManager's ($state)"
+        return
+    fi
+
+    # The installer's credentials live in a root-only file. Copy them into an NM
+    # profile BEFORE releasing the card, so the machine is offline for seconds
+    # rather than for however long it takes to retype a password.
+    ssid="$(sed -n 's/^[[:space:]]*wpa-ssid[[:space:]]\+//p' /etc/network/interfaces 2>/dev/null \
+        | head -1 | sed 's/^"//; s/"$//')"
+    psk="$(sed -n 's/^[[:space:]]*wpa-psk[[:space:]]\+//p' /etc/network/interfaces 2>/dev/null \
+        | head -1 | sed 's/^"//; s/"$//')"
+    if [ -z "$ssid" ] || [ -z "$psk" ]; then
+        problem "$wifi is unmanaged and /etc/network/interfaces has no wifi to migrate"
+        warned "join one by hand instead: nmcli device wifi connect \"<SSID>\" --ask"
+        fail_phase system
+        return
+    fi
+
+    warned "handing $wifi to NetworkManager -- the connection drops for a few seconds"
+    run nmcli connection add type wifi con-name "$ssid" ifname "$wifi" ssid "$ssid" \
+        wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk" connection.autoconnect yes \
+        || { problem "could not create the NM profile -- nothing was torn down"; fail_phase system; return; }
+
+    # /etc/network/interfaces is deliberately not touched. It is the way back.
+    run systemctl disable --now networking
+    run systemctl restart NetworkManager
+
+    [ "$DRY_RUN" -eq 1 ] && return
+
+    # The tools phase downloads from the network right after this, so do not
+    # return until the link is actually back.
+    waited=0
+    while [ "$waited" -lt 45 ]; do
+        state="$(nmcli -t -f DEVICE,STATE device status 2>/dev/null | awk -F: -v d="$wifi" '$1==d{print $2}')"
+        [ "$state" = "connected" ] && break
+        sleep 2
+        waited=$((waited + 2))
+    done
+
+    if [ "$state" = "connected" ]; then
+        added "$wifi connected to $ssid, NetworkManager driving"
+    else
+        problem "$wifi did not come back (state: ${state:-unknown})"
+        warned "to restore: systemctl stop NetworkManager; systemctl enable --now networking; ifup $wifi"
+        fail_phase system
+    fi
+}
+
 phase_system() {
     step "System"
 
@@ -299,20 +367,39 @@ phase_system() {
         fi
     done
 
-    # -- polkit: join new wifi without an administrator ----------------------
-    # THE one that decides whether this machine works in a library. With root
-    # locked and no admin group, NetworkManager's default auth_admin rules make
-    # connecting to an unseen network impossible. trixie's polkit does not read
-    # the old .pkla files, so this must be a .rules file.
-    write_file /etc/polkit-1/rules.d/50-nm-console.rules \
-"// Written by debian/setup.sh. Lets $user manage NetworkManager with no
-// administrator present, which is the state this machine ends in.
-polkit.addRule(function(action, subject) {
-    if (action.id.indexOf(\"org.freedesktop.NetworkManager.\") === 0 &&
-        subject.user === \"$user\") {
-        return polkit.Result.YES;
-    }
-});"
+    # -- wifi without an administrator --------------------------------------
+    # THE pair of settings that decides whether this machine works in a library.
+    #
+    # plugins: Debian ships plugins=ifupdown,keyfile with [ifupdown]
+    # managed=false, so NM stands aside from any interface configured in
+    # /etc/network/interfaces -- and a console-only netinst puts the wifi
+    # exactly there. Dropping the ifupdown plugin is what lets NM manage the
+    # card at all; without it nmcli reports the device as "unmanaged".
+    #
+    # auth-polkit: NM asks polkit whether an unprivileged caller may change
+    # anything. There is no polkit here and there is not going to be -- it ships
+    # pkexec, a setuid-root escalation path this machine is built to not have,
+    # and --no-install-recommends is the only reason network-manager did not
+    # drag it in. With nothing to ask, NM must be told to allow local callers
+    # directly. One user, no display server, no sshd: nobody else to ask about.
+    if write_file /etc/NetworkManager/conf.d/10-console.conf \
+'# Written by debian/setup.sh -- read the NetworkManager section of
+# notes/build-plan.md before changing either of these.
+[main]
+plugins=keyfile
+auth-polkit=false' && command -v nmcli >/dev/null 2>&1; then
+        run nmcli general reload
+    fi
+
+    nm_takeover
+
+    # Superseded by the two settings above. An earlier version of this script
+    # wrote a polkit rule here, on a machine with no polkit to read it, and
+    # verify() reported the file's existence as a passing check.
+    if [ -f /etc/polkit-1/rules.d/50-nm-console.rules ]; then
+        run rm -f /etc/polkit-1/rules.d/50-nm-console.rules \
+            && added "removed the inert polkit rule -- nothing reads it"
+    fi
 
     # -- unattended-upgrades ------------------------------------------------
     write_file /etc/apt/apt.conf.d/20auto-upgrades \
@@ -512,6 +599,27 @@ phase_tools() {
             fail_phase tools
         fi
     done
+
+    # nvm is a shell function, not a binary, so the loop above cannot see it.
+    # PROFILE=/dev/null stops its installer appending to ~/.bashrc -- that file
+    # is a symlink into this repo and already sources nvm itself.
+    #
+    # Node never comes from apt on this machine: apt's node puts globals in
+    # /usr/lib/node_modules, which npm cannot write to once there is no root.
+    if [ -s "$HOME/.nvm/nvm.sh" ]; then
+        skipped "nvm present ($HOME/.nvm)"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? install nvm into ~/.nvm%s\n' "$C_SKIP" "$C_OFF"
+    else
+        added "installing nvm"
+        if curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh \
+            | PROFILE=/dev/null bash >/dev/null 2>&1; then
+            added "nvm -> $HOME/.nvm  (then: nvm install --lts)"
+        else
+            problem "nvm install failed"
+            fail_phase tools
+        fi
+    fi
 }
 
 #---------------------------------------------------------------------------
@@ -582,9 +690,31 @@ EOF
         problem "unattended-upgrades not enabled -- no patches after the gate"
     fi
 
-    [ -f /etc/polkit-1/rules.d/50-nm-console.rules ] \
-        && skipped "NetworkManager polkit rule present" \
-        || problem "no NetworkManager polkit rule -- cannot join a new wifi network after the gate"
+    # Not "is the config file there" -- that question answered yes for weeks
+    # while the real answer was no. Ask the two things that actually decide
+    # whether this machine can join a network in a library: does NM own the
+    # card, and may this account tell it to do anything.
+    if ! command -v nmcli >/dev/null 2>&1; then
+        problem "nmcli not installed -- no way to join a wifi network without root"
+    else
+        local wifi_state
+        wifi_state="$(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null \
+            | awk -F: '$2=="wifi"{print $3; exit}')"
+        case "$wifi_state" in
+            "")          problem "nmcli sees no wifi device" ;;
+            unmanaged)   problem "wifi is unmanaged by NetworkManager -- cannot join a new network" ;;
+            *)           skipped "wifi is NetworkManager's ($wifi_state)" ;;
+        esac
+
+        if is_root; then
+            skipped "nmcli permissions not checked as root -- root is allowed either way"
+        elif [ "$(nmcli -t general permissions 2>/dev/null \
+            | awk -F: '$1=="org.freedesktop.NetworkManager.settings.modify.system"{print $2}')" = "yes" ]; then
+            skipped "nmcli usable without root"
+        else
+            problem "nmcli cannot modify connections as this user -- the machine is stuck on known networks"
+        fi
+    fi
 
     [ "$PROBLEM_COUNT" -gt 0 ] && fail_phase verify
     return 0
