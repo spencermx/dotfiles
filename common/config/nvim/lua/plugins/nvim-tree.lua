@@ -6,6 +6,7 @@ return {
             highlight_opened_files = "name",
             indent_markers = {enable = true},
         }
+        local git = {}
 
         if vim.env.DOTFILES_CONSOLE == "1" then
             renderer.icons = {
@@ -13,7 +14,8 @@ return {
                     file = {enable = false, color = false},
                     folder = {enable = false, color = false},
                 },
-                show = {folder = false},
+                git_placement = "after",
+                show = {file = false, folder = false},
                 symlink_arrow = " -> ",
                 glyphs = {
                     default = "-",
@@ -42,11 +44,16 @@ return {
                     },
                 },
             }
+            -- A directory inheriting every status below it produces lines
+            -- such as `v M ? debian`, which obscure the tree more than they
+            -- inform on an 80-column console. Mark only the affected files.
+            git = {show_on_dirs = false, show_on_open_dirs = false}
         end
 
         require("nvim-tree").setup({
             view = {width = 30, side = "left"},
             renderer = renderer,
+            git = git,
             filters = {dotfiles = false},
             actions = {open_file = {quit_on_open = false}}
         })
