@@ -5,14 +5,40 @@ return {
         'nvim-tree/nvim-web-devicons' -- OPTIONAL: for file icons
     },
     init = function() vim.g.barbar_auto_setup = false end,
-    opts = {
-        -- lazy.nvim will automatically call setup for you. put your options here, anything missing will use the default:
-        -- animation = true,
-        -- insert_at_start = true,
-        -- …etc.
-    },
+    opts = function()
+        if vim.env.DOTFILES_CONSOLE ~= "1" then
+            return {}
+        end
+        return {
+            icons = {
+                button = "x",
+                filetype = {enabled = false},
+                modified = {button = "*"},
+                pinned = {button = "P", filename = true},
+                separator = {left = "|", right = ""},
+                inactive = {separator = {left = "|", right = ""}},
+            },
+        }
+    end,
     config = function(_, opts)
         require('barbar').setup(opts)
+
+        if vim.env.DOTFILES_CONSOLE == "1" then
+            -- Barbar computes RGB-oriented defaults after the colorscheme has
+            -- loaded. Override them here so inactive tabs remain readable.
+            vim.cmd([[
+                highlight! BufferCurrent          cterm=bold ctermfg=15 ctermbg=4
+                highlight! BufferCurrentBtn       cterm=bold ctermfg=15 ctermbg=4
+                highlight! BufferCurrentMod       cterm=bold ctermfg=11 ctermbg=4
+                highlight! BufferCurrentModBtn    cterm=bold ctermfg=11 ctermbg=4
+                highlight! BufferInactive         cterm=NONE ctermfg=7 ctermbg=0
+                highlight! BufferInactiveBtn      cterm=NONE ctermfg=8 ctermbg=0
+                highlight! BufferInactiveMod      cterm=NONE ctermfg=11 ctermbg=0
+                highlight! BufferInactiveModBtn   cterm=NONE ctermfg=11 ctermbg=0
+                highlight! BufferVisible          cterm=NONE ctermfg=15 ctermbg=8
+                highlight! BufferVisibleBtn       cterm=NONE ctermfg=15 ctermbg=8
+            ]])
+        end
 
         local map = vim.keymap.set
         local key_opts = {noremap = true, silent = true}

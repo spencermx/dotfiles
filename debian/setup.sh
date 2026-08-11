@@ -85,6 +85,7 @@ LINKS=(
     "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
     "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
+    "$HOME/.config/yazi/theme.toml|$REPO_ROOT/config/yazi/theme.toml"
 
     "$HOME/.claude/CLAUDE.md|$SHARED_ROOT/config/claude/CLAUDE.md"
     "$HOME/.claude/settings.json|$SHARED_ROOT/config/claude/settings.json"
@@ -93,6 +94,7 @@ LINKS=(
 ENSURE_DIRS=(
     "$HOME/.config"
     "$HOME/.config/git"
+    "$HOME/.config/yazi"
     "$HOME/.local/share"
     "$HOME/.local/bin"
     "$HOME/.claude"
