@@ -8,7 +8,10 @@ return {
             require("nvim-treesitter.config").setup({
                 ensure_installed = {
                     "c", "lua", "vim", "vimdoc", "query", "go", "c_sharp", "cpp", "css", "csv",
-                    "cmake", "dockerfile", "javascript", "java"
+                    "cmake", "dockerfile", "javascript", "java",
+                    -- godot_resource covers .tscn/.tres/.godot, which are the
+                    -- files you cannot open in an editor on a console-only box.
+                    "gdscript", "godot_resource"
                 },
 
                 auto_install = true,
