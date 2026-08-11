@@ -298,7 +298,7 @@ scroll**. It is not a convenience here.
 tmux vim git openssh-client build-essential python3 curl wget
 ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
 man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
-procps lsof strace htop ncdu bat brightnessctl acpi
+procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
 ```
 - **neovim is not in this list on purpose.** It comes from the upstream
   tarball into `~/.local/bin`, for the same reason as `claude` and `gh`: over
@@ -312,8 +312,11 @@ procps lsof strace htop ncdu bat brightnessctl acpi
 - `man-db manpages manpages-dev` — Claude CLI is the documentation surface
   only while the network is up. In a library with captive-portal wifi, man
   pages are the entire offline manual.
-- `brightnessctl` ships a udev rule granting the `video` group write access to
-  `/sys/class/backlight`. Without it, screen brightness needs root — on a
+- Debian splits the command and permissions into two packages: `brightnessctl`
+  is only the binary, while `brightness-udev` supplies the rule granting the
+  `video` group write access to `/sys/class/backlight`. The latter is merely a
+  Recommends and is therefore omitted by `--no-install-recommends` unless it is
+  named explicitly. Without both, screen brightness needs root — on a
   battery-powered machine used in varying light, that matters daily.
 - Debian renames two binaries: `fd-find` installs `fdfind`, `bat` installs
   `batcat`. Handled in the dotfiles shell config, not by a root-owned symlink
