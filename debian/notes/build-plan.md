@@ -588,6 +588,9 @@ failure means fix it now, while root still exists.
       downloads patches it can never apply
 [ ] `poweroff` as the user actually powers off
 [ ] unattended-upgrade --dry-run exits clean
+[ ] journalctl -b shows SYSTEM messages, not just this user's. Needs the
+      adm group, which needs root, so it is pre-gate only -- and without
+      it there is no way to ever see why anything failed
 [ ] timedatectl reports synchronised
 [ ] man git renders
 [ ] godot --headless --version, if keeping it

@@ -176,6 +176,10 @@ write_file() {
     fi
     mkdir -p "$(dirname "$path")"
     printf '%s\n' "$content" > "$path" || return 1
+    # Do not inherit whatever umask the invoking shell had. These are systemd
+    # units and system config; group-writable is wrong even when the group is
+    # root, and after the gate nothing can chmod them.
+    chmod 644 "$path"
     added "wrote $path"
     return 0
 }
@@ -401,9 +405,13 @@ phase_system() {
 
     # -- groups -------------------------------------------------------------
     # video: brightnessctl's udev rule grants this group write access to
-    # /sys/class/backlight. netdev: NetworkManager convention.
+    # /sys/class/backlight. netdev: NetworkManager convention. adm: reads the
+    # system journal -- without it `journalctl` shows only this user's own
+    # messages, so after the gate there would be no way to see why an
+    # unattended upgrade, a boot, or the wifi failed. All three need root to
+    # grant and are therefore pre-gate only.
     local g
-    for g in video netdev; do
+    for g in video netdev adm; do
         if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx "$g"; then
             skipped "$user already in $g"
         else
@@ -777,6 +785,18 @@ EOF
         problem "a display server is installed -- this machine is supposed to be incapable of running one"
     else
         skipped "no display server present"
+    fi
+
+    # Without adm, journalctl shows only this user's own messages -- and after
+    # the gate there is no way to join the group, so every system log is gone
+    # for good. Root sees everything regardless, so only check as the user.
+    if is_root; then
+        skipped "journal access not checked as root"
+    elif journalctl -b -n1 --no-pager >/dev/null 2>&1 && \
+         ! journalctl -b -n1 --no-pager 2>&1 | grep -q 'not seeing messages'; then
+        skipped "system journal readable"
+    else
+        problem "cannot read the system journal -- $USER is not in adm"
     fi
 
     if [ -e /sys/class/backlight ] && [ -n "$(ls -A /sys/class/backlight 2>/dev/null)" ]; then
