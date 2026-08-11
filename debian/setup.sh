@@ -2,17 +2,17 @@
 #
 # Provisions the console-only Debian ThinkPad from this repo.
 #
+#   su -c ./setup.sh                  provisions the whole machine
+#   ./setup.sh                        links and tools; all a normal user can do
 #   ./setup.sh --dry-run              preview, changes nothing
-#   ./setup.sh                        every phase the current user can run
-#   ./setup.sh --phase packages       apt packages                (needs root)
-#   ./setup.sh --phase system         console, clock, network, updates (root)
-#   ./setup.sh --phase links          symlink dotfiles            (no root)
-#   ./setup.sh --phase tools          user-local binaries         (no root)
-#   ./setup.sh --phase links,tools    both no-root phases
+#   ./setup.sh --phase packages,system,links,tools     pick phases by hand
 #
-# There is no sudo on this machine, by design. Run the root phases from a root
-# shell (`su -`), and the user phases as yourself. Running everything as root
-# would write $HOME links into /root, so the script refuses.
+# There is no sudo on this machine, by design, so there is no single command
+# that can do everything from one account. `su -c ./setup.sh` gets closest:
+# it runs the two root phases itself, then hands links and tools back to your
+# own account, because as root $HOME is /root and the links would land there.
+#
+# After the gate there is no root, and plain ./setup.sh is the whole story.
 #
 # Read debian/notes/build-plan.md before changing anything here. The machine is
 # provisioned once behind a one-way gate; after it, packages/system can never
@@ -22,6 +22,15 @@ set -o pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHARED_ROOT="$(dirname "$REPO_ROOT")/common"
+
+# Everything user-local lives here, and the script has to see it however it was
+# invoked -- `su - <user> -c` runs a non-interactive shell, which returns out of
+# .bashrc before the PATH line. Without this, nvim/gh/claude look missing and
+# the tools phase reinstalls what is already there.
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
 
 #---------------------------------------------------------------------------
 # Configuration
@@ -83,9 +92,12 @@ ENSURE_DIRS=(
 
 # User-local binaries, as "command|installer function". Everything here lives
 # under $HOME so it can be updated with no root for the life of the machine.
-TOOLS=(nvim gh yazi)
+TOOLS=(nvim gh yazi claude)
 
-EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide bat fdfind brightnessctl claude)
+# Debian's names, not the upstream ones: fd-find installs fdfind and bat
+# installs batcat. The shell config aliases them back; a script cannot see an
+# alias, so check for what is actually on disk.
+EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi)
 
 # Console font. The default 8x16 at 1080p on a 14" panel is punishing for a
 # full day, and /etc/default/console-setup needs root to change.
@@ -464,6 +476,13 @@ install_yazi() {
     rm -rf "$tmp"
 }
 
+# The native installer, not npm: it drops a self-contained binary that updates
+# itself in place, so no Node major-version bump can ever strand the CLI on a
+# machine that cannot install one.
+install_claude() {
+    curl -fsSL https://claude.ai/install.sh | bash
+}
+
 phase_tools() {
     step "Tools"
 
@@ -493,12 +512,6 @@ phase_tools() {
             fail_phase tools
         fi
     done
-
-    if command -v claude >/dev/null 2>&1; then
-        skipped "claude present ($(command -v claude))"
-    else
-        warned "claude not installed -- curl -fsSL https://claude.ai/install.sh | bash"
-    fi
 }
 
 #---------------------------------------------------------------------------
@@ -508,21 +521,27 @@ phase_tools() {
 verify() {
     step "Verify"
 
-    local entry dest src
-    while IFS= read -r entry; do
-        [ -z "$entry" ] && continue
-        dest="${entry%%|*}"
-        src="${entry#*|}"
-        if [ ! -L "$dest" ]; then
-            problem "not a symlink: $dest"
-        elif [ "$(readlink "$dest")" != "$src" ]; then
-            problem "points elsewhere: $dest -> $(readlink "$dest")"
-        elif [ ! -e "$dest" ]; then
-            problem "dangling: $dest"
-        fi
-    done <<EOF
+    # $LINKS was expanded from $HOME, which is /root here. Checking it as root
+    # would report all ten as missing and say nothing about the real ones.
+    if is_root; then
+        skipped "links not checked as root -- they belong to the user's \$HOME"
+    else
+        local entry dest src
+        while IFS= read -r entry; do
+            [ -z "$entry" ] && continue
+            dest="${entry%%|*}"
+            src="${entry#*|}"
+            if [ ! -L "$dest" ]; then
+                problem "not a symlink: $dest"
+            elif [ "$(readlink "$dest")" != "$src" ]; then
+                problem "points elsewhere: $dest -> $(readlink "$dest")"
+            elif [ ! -e "$dest" ]; then
+                problem "dangling: $dest"
+            fi
+        done <<EOF
 $(printf '%s\n' "${LINKS[@]}")
 EOF
+    fi
 
     local p missing=0
     for p in "${PACKAGES[@]}"; do
@@ -577,6 +596,43 @@ EOF
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
 
+summary() {
+    step "Summary"
+    if [ -n "$FAILED_PHASES" ]; then
+        printf '   %sproblems in:%s%s\n' "$C_ERR" "$FAILED_PHASES" "$C_OFF"
+        printf '   %s%d issue(s) named above%s\n' "$C_ERR" "$PROBLEM_COUNT" "$C_OFF"
+        exit 1
+    fi
+    printf '   %sok%s\n' "$C_ADD" "$C_OFF"
+    exit 0
+}
+
+# Root cannot do links and tools -- $HOME is /root -- so re-run this script as
+# the account that owns them. That run does the health check, because it is the
+# only one that can see the real $HOME, and its exit status becomes ours.
+handoff() {
+    local user status flags
+    user="$(target_user)"
+    if [ -z "$user" ]; then
+        problem "no non-root account found -- run ./setup.sh yourself for links and tools"
+        fail_phase handoff
+        summary
+    fi
+
+    step "Links and tools, as $user"
+    if [ -n "$FAILED_PHASES" ]; then
+        warned "root phases had problems:$FAILED_PHASES"
+    fi
+
+    flags="--phase links,tools"
+    [ "$DRY_RUN" -eq 1 ] && flags="--dry-run $flags"
+    su - "$user" -c "\"$REPO_ROOT/setup.sh\" $flags"
+    status=$?
+
+    [ -n "$FAILED_PHASES" ] && exit 1
+    exit "$status"
+}
+
 main() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -604,11 +660,11 @@ main() {
 
     printf '%sdebian setup - %s%s\n' "$C_STEP" "$REPO_ROOT" "$C_OFF"
     [ "$DRY_RUN" -eq 1 ] && printf '%s(dry run -- nothing will change)%s\n' "$C_WARN" "$C_OFF"
-    is_root && printf '%s(running as root -- packages and system only)%s\n' "$C_WARN" "$C_OFF"
+    is_root && printf '%s(running as root -- then handing links and tools back to your account)%s\n' "$C_WARN" "$C_OFF"
 
-    # Phases are isolated: one failing does not stop the others. When no --phase
-    # is given, run the ones this user can actually do, so a plain ./setup.sh is
-    # correct both from `su -` and from your own account.
+    # Phases are isolated: one failing does not stop the others. With no
+    # --phase, do everything this account can reach -- which for root means
+    # finishing through handoff(), so one command provisions the machine.
     if [ -n "$PHASES" ]; then
         wants_phase packages && phase_packages
         wants_phase system   && phase_system
@@ -617,20 +673,14 @@ main() {
     elif is_root; then
         phase_packages
         phase_system
+        handoff
     else
         phase_links
         phase_tools
     fi
 
     verify
-
-    step "Summary"
-    if [ -n "$FAILED_PHASES" ]; then
-        printf '   %sproblems in:%s%s\n' "$C_ERR" "$FAILED_PHASES" "$C_OFF"
-        printf '   %s%d issue(s) named above%s\n' "$C_ERR" "$PROBLEM_COUNT" "$C_OFF"
-        exit 1
-    fi
-    printf '   %sok%s\n' "$C_ADD" "$C_OFF"
+    summary
 }
 
 main "$@"
