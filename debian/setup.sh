@@ -77,6 +77,15 @@ PACKAGES=(
     # here again -- including gdtoolkit, which is the GDScript linter.
     python3-venv pipx
 
+    # Mason's luaformatter is a luarocks package whose rockspec declares
+    # `build = { type = "cmake" }`, so `:MasonInstall luaformatter` compiles
+    # LuaFormatter from source and fails with no cmake. build-essential does
+    # not provide it. The shared formatter config points :Format at lua-format
+    # for Lua buffers, so without this there is no Lua formatting on this
+    # machine -- and cmake is apt, so it has to be here rather than fixed
+    # later.
+    cmake
+
     # Godot dlopens libfontconfig at startup on linuxbsd. Everything this
     # machine actually uses -- --version, --check-only, and the headless
     # editor's LSP -- still works without it, but the binary reports the

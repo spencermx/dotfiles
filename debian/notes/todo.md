@@ -92,11 +92,15 @@ For any assistant continuing this work:
   enable|disable` for the rest. `:lsp` has no `info` subcommand.
 
 - [ ] Re-run the root phase of `setup.sh` — the package list grew.
-  `libfontconfig1` (Godot dlopens it), plus `python3-venv` and `pipx`. This is
-  apt, so it can only ever happen before the gate. Without the Python two,
-  nothing can ever install a Python package on this machine again — including
-  `gdtoolkit`, which is the only GDScript formatter and linter that exists
-  here. `su -c 'debian/setup.sh packages'`.
+  `libfontconfig1` (Godot dlopens it), `cmake`, plus `python3-venv` and `pipx`.
+  This is apt, so it can only ever happen before the gate. Without the Python
+  two, nothing can ever install a Python package on this machine again —
+  including `gdtoolkit`, which is the only GDScript formatter and linter that
+  exists here. Without `cmake`, `:MasonInstall luaformatter` cannot build, so
+  there is no Lua formatting either. From `debian/`:
+  `su -c './setup.sh --phase packages'` — the phase is a `--phase` value, not a
+  positional argument, and `su -c ./setup.sh` would run `system` and the
+  handoff too.
 
 - [ ] Install gdtoolkit once pipx exists.
   `setup.sh`'s tools phase does it (`pipx install 'gdtoolkit==4.*'`), pinned to
