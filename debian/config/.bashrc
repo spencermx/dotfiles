@@ -75,15 +75,27 @@ command -v batcat >/dev/null && alias bat=batcat
 #
 # Try the command anyway: it succeeds while root still exists to be `su`d to,
 # and once it stops working it says what to do instead.
-_shutdown_note() {
-	printf '%s: denied -- no polkit here to authorise it.\n' "$1" >&2
-	printf '  press the power button for a clean poweroff, then power on\n' >&2
-	printf "  or, while root still exists:  su -c 'systemctl %s'\n" "$1" >&2
+# The mechanism is /run/user-power, a directory this account owns, watched by
+# root-owned path units that setup.sh installs. Touching a file in it is the
+# whole request. That exists because the obvious routes are both closed here:
+# `systemctl reboot` needs polkit, which this machine does not have, and after
+# the gate there is no root to su to.
+_power_request() {
+	local act="$1"
+	if [ -d /run/user-power ] && touch "/run/user-power/$act" 2>/dev/null; then
+		printf '%s requested.\n' "$act"
+		return 0
+	fi
+	# Before setup.sh has run, or if the path units are gone.
+	systemctl "$act" 2>/dev/null && return 0
+	printf '%s: no mechanism available.\n' "$act" >&2
+	printf '  /run/user-power is missing -- run debian/setup.sh as root\n' >&2
+	printf "  meanwhile, while root exists:  su -c 'systemctl %s'\n" "$act" >&2
 	return 1
 }
 
-reboot()   { systemctl reboot   2>/dev/null || _shutdown_note reboot;   }
-poweroff() { systemctl poweroff 2>/dev/null || _shutdown_note poweroff; }
+reboot()   { _power_request reboot;   }
+poweroff() { _power_request poweroff; }
 
 #---------------------------------------------------------------------------
 # Functions
