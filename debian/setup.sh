@@ -65,10 +65,25 @@ PACKAGES=(
     console-setup kbd locales
 
     # toolchain
-    tmux vim git openssh-client build-essential python3 curl wget
+    tmux vim git openssh-client build-essential python3 luarocks curl wget
     ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
     man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
     procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
+
+    # The only way to install a Python package on this machine. Debian marks
+    # the system interpreter EXTERNALLY-MANAGED (PEP 668), so `pip install
+    # --user` is refused outright and `python3 -m venv` fails without
+    # python3-venv. Without both, no Python dependency can ever be installed
+    # here again -- including gdtoolkit, which is the GDScript linter.
+    python3-venv pipx
+
+    # Godot dlopens libfontconfig at startup on linuxbsd. Everything this
+    # machine actually uses -- --version, --check-only, and the headless
+    # editor's LSP -- still works without it, but the binary reports the
+    # failure on every single run and get_system_font_path() errors in the
+    # editor log. It is the one apt dependency the Godot check turned up, and
+    # apt is what disappears at the gate.
+    libfontconfig1
 )
 
 # "link location|file in this repo"
@@ -104,12 +119,15 @@ ENSURE_DIRS=(
 
 # User-local binaries, as "command|installer function". Everything here lives
 # under $HOME so it can be updated with no root for the life of the machine.
-TOOLS=(nvim gh yazi claude)
+TOOLS=(nvim gh yazi claude godot tree-sitter)
 
 # Debian's names, not the upstream ones: fd-find installs fdfind and bat
 # installs batcat. The shell config aliases them back; a script cannot see an
 # alias, so check for what is actually on disk.
-EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi nmcli)
+EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi nmcli luarocks
+    # tree-sitter is checked here on purpose: without it every :TSInstall
+    # fails silently and the editor still looks fine, so nothing else notices.
+    godot tree-sitter)
 
 # Console font. The default 8x16 at 1080p on a 14" panel is punishing for a
 # full day, and /etc/default/console-setup needs root to change.
@@ -692,6 +710,54 @@ install_claude() {
     curl -fsSL https://claude.ai/install.sh | bash
 }
 
+# The standard build, not the mono one: this machine edits GDScript and has no
+# dotnet SDK. The asset names differ by one underscore -- standard is
+# Godot_v4.7.1-stable_linux.x86_64.zip and mono is
+# Godot_v4.7.1-stable_mono_linux_x86_64.zip -- so the pattern below has to keep
+# "stable_linux" adjacent or it will silently fetch the wrong engine.
+#
+# Verified headless on this machine at 4.7.1: ldd links only libc, libm,
+# libpthread, libdl and librt, so nothing graphical is required to run it.
+# Export templates are deliberately not installed -- this box does not export.
+# nvim-treesitter's current branch builds parsers with the tree-sitter CLI, not
+# with a bare C compiler. build-essential alone is therefore not enough, which
+# is easy to miss because the failure is quiet: :TSInstall reports
+# "ENOENT (cmd): 'tree-sitter'" and auto_install swallows it. Found on this
+# machine with *no* parsers installed at all -- only the seven Neovim ships
+# with -- so every language in ensure_installed had been falling back to regex
+# syntax since the box was built.
+#
+# Upstream ships a single gzipped static binary, so this stays user-local and
+# updatable after the gate. It must be installed before the lazy.nvim sync
+# below, which is what triggers the first parser build; the $TOOLS loop runs
+# first, so that ordering already holds.
+install_tree-sitter() {
+    local url tmp
+    url="$(gh_latest_asset tree-sitter/tree-sitter 'tree-sitter-linux-x64.gz')"
+    [ -n "$url" ] || return 1
+    tmp="$(mktemp -d)" || return 1
+    curl -fsSL "$url" -o "$tmp/ts.gz" || { rm -rf "$tmp"; return 1; }
+    gunzip -f "$tmp/ts.gz" || { rm -rf "$tmp"; return 1; }
+    cp "$tmp/ts" "$HOME/.local/bin/tree-sitter" || { rm -rf "$tmp"; return 1; }
+    chmod +x "$HOME/.local/bin/tree-sitter"
+    rm -rf "$tmp"
+}
+
+install_godot() {
+    local url tmp bin
+    url="$(gh_latest_asset godotengine/godot 'stable_linux.x86_64.zip')"
+    [ -n "$url" ] || return 1
+    tmp="$(mktemp -d)" || return 1
+    curl -fsSL "$url" -o "$tmp/godot.zip" || { rm -rf "$tmp"; return 1; }
+    unzip -q "$tmp/godot.zip" -d "$tmp" || { rm -rf "$tmp"; return 1; }
+    # The zip holds a bare versioned executable, not a directory like yazi's.
+    bin="$(find "$tmp" -maxdepth 1 -type f -name 'Godot_v*_linux.x86_64' | head -1)"
+    [ -n "$bin" ] || { rm -rf "$tmp"; return 1; }
+    cp "$bin" "$HOME/.local/bin/godot" || { rm -rf "$tmp"; return 1; }
+    chmod +x "$HOME/.local/bin/godot"
+    rm -rf "$tmp"
+}
+
 phase_tools() {
     step "Tools"
 
@@ -763,6 +829,29 @@ phase_tools() {
             added "installing Node LTS through nvm"
             nvm install --lts \
                 || { problem "Node install failed"; fail_phase tools; }
+        fi
+    fi
+
+    # gdformat and gdlint. Godot's own LSP handles completion and go-to-def,
+    # but it provides neither formatting nor linting -- documentFormatting is
+    # false in its advertised capabilities -- so this is the only thing that
+    # formats GDScript on this machine. Pin the major version to the engine's:
+    # gdtoolkit 4.x parses Godot 4 syntax and 3.x does not.
+    if command -v gdformat >/dev/null 2>&1; then
+        skipped "gdtoolkit present ($(command -v gdformat))"
+    elif ! command -v pipx >/dev/null 2>&1; then
+        problem "pipx missing -- gdtoolkit cannot be installed"
+        warned "pipx is an apt package, so this is only fixable before the gate"
+        fail_phase tools
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? install gdtoolkit (gdformat, gdlint) with pipx%s\n' "$C_SKIP" "$C_OFF"
+    else
+        added "installing gdtoolkit"
+        if pipx install 'gdtoolkit==4.*' >/dev/null 2>&1; then
+            added "gdformat, gdlint -> $HOME/.local/bin"
+        else
+            problem "gdtoolkit install failed"
+            fail_phase tools
         fi
     fi
 

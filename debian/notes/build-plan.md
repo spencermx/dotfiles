@@ -295,7 +295,7 @@ scroll**. It is not a convenience here.
 
 ### Toolchain
 ```
-tmux vim git openssh-client build-essential python3 curl wget
+tmux vim git openssh-client build-essential python3 luarocks curl wget
 ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
 man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
 procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
@@ -307,8 +307,22 @@ procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
   that actually hurts. apt's `vim` stays as the unbreakable fallback — if a
   user-local nvim ever fails to start, there is still an editor.
 - `build-essential` is mandatory, not optional: nvim-treesitter compiles
-  parsers with a C compiler on first run. Without it the editor config
-  half-fails on a machine that can no longer install a compiler.
+  parsers on first run and links them with a C compiler. Without it the editor
+  config half-fails on a machine that can no longer install a compiler.
+  **It is necessary and not sufficient**, which is the part this plan
+  originally got wrong. nvim-treesitter's current branch drives the build
+  through the separate `tree-sitter` CLI, which is not in the archive and is
+  not what `build-essential` provides. Measured on the built machine: every
+  `:TSInstall` failed with `ENOENT (cmd): 'tree-sitter'`, `auto_install`
+  swallowed the error, and the box had **no parsers at all** beyond the seven
+  Neovim ships with — so every language in `ensure_installed` had been
+  falling back to regex syntax since the build. Fixed user-local, from
+  upstream's gzipped static binary, by `install_tree-sitter` in `setup.sh`.
+  That it is user-local matters: this one is repairable after the gate.
+- `luarocks` is required by Mason's `luaformatter` package. Without it Mason
+  cannot install `lua-format`, and the shared Neovim formatter config fails at
+  runtime. It comes from apt because Mason invokes the system command while
+  building the formatter.
 - `man-db manpages manpages-dev` — Claude CLI is the documentation surface
   only while the network is up. In a library with captive-portal wifi, man
   pages are the entire offline manual.
@@ -455,29 +469,74 @@ needs, so the authorisation half is proven. The remaining test is a real
 association with a network the machine has never seen — a phone hotspot, at
 the gate.
 
-## Godot — the decision is not one-way
+## Godot — checked on 2026-08-11, and it works better than expected
 
-The premise that it must be settled before the gate is wrong, and worth
-correcting because it removes a forced choice.
+The premise that it must be settled before the gate was wrong, and the check
+has now been run. Godot's official Linux build is a single self-contained
+executable: no installer, no package, no root, and it unzips into
+`~/.local/bin` on any day, including after the gate.
 
-Godot's official Linux build is a single self-contained executable. There is no
-installer, no package, and no root: it unzips into `~/.local/bin` on any day,
-including after the gate. Godot 4 loads its display drivers dynamically, which
-is exactly why `--headless` works in minimal CI containers with no X libraries
-present — the same reason it will run here.
+**Verified at 4.7.1-stable, standard build, on this machine:**
 
-What *is* one-way is the dependency question. So: **unzip it and run
-`godot --headless --version` before the gate.** If it runs, delete it or keep
-it as you like — either way you have proven it can be added later. If it turns
-out to want a library from apt, that is precisely the finding you need while
-root still exists.
+```
+ldd Godot_v4.7.1-stable_linux.x86_64
+    librt libpthread libdl libm libc + ld-linux        (nothing graphical)
+godot --headless --version        -> 4.7.1.stable.official   exit 0
+godot --headless --check-only --script good.gd            -> exit 0
+godot --headless --check-only --script bad.gd             -> exit 1
+    SCRIPT ERROR: Parse Error: Unexpected "Indent" in class body.
+              at: GDScript::reload (res://bad.gd:3)
+```
+
+Nothing graphical is linked, so the dlopen reasoning held. Syntax checking
+reports the file and line, which makes it usable as a real check on a box that
+edits GDScript blind.
+
+**One apt dependency turned up, which is exactly why the check exists.** The
+binary dlopens `libfontconfig.so.1` and prints
+`cannot open shared object file` on every run; the editor additionally errors
+in `get_system_font_path` at `platform/linuxbsd/os_linuxbsd.cpp:843`. Nothing
+this machine does actually breaks without it, but `libfontconfig1` is in the
+archive and the archive is what disappears at the gate, so it is now in
+`$PACKAGES`.
+
+### The LSP does run headless — this was the wrong assumption
+
+The natural reading is that Godot's language server is an *editor* feature and
+so cannot exist on a machine with no display server. That is false, and it is
+the single biggest quality-of-life finding in this build:
+
+```
+godot --headless --editor --path <project>
+ss -ltn | grep 6005     ->  LISTEN 127.0.0.1:6005     (~3 seconds)
+```
+
+A real LSP `initialize` handshake over that socket returns
+`completionProvider` (trigger characters `.`, `$`, `'`, `"`),
+`definitionProvider`, `declarationProvider`, `hoverProvider`,
+`documentSymbolProvider`, `referencesProvider` and `renameProvider`. So this
+machine gets completion and go-to-definition for GDScript, not merely syntax
+highlighting. `common/config/nvim/lua/plugins/mason-lspconfig.lua` points at
+`127.0.0.1:6005`; Mason has nothing to install, because the server is the
+engine.
+
+Two costs worth knowing. The headless editor is a background process per
+project, on a battery-powered laptop. And it imports the project on first open,
+which writes `.godot/` and takes time on a large one.
+
+`documentFormattingProvider` is **false** — the engine will not format. That is
+what `gdtoolkit` is for: `gdformat` and `gdlint`, pinned to 4.x to match the
+engine, installed with `pipx` because Debian marks the system interpreter
+`EXTERNALLY-MANAGED` and refuses `pip install --user`. `pipx` and
+`python3-venv` are apt packages, so **GDScript formatting and linting are
+pre-gate-only decisions** even though the engine itself is not.
 
 Export templates stay off the machine. `--headless --export-release` needs
 them and this box does not export; the desktop does.
 
-Useful without templates: `godot --headless --check-only --script foo.gd`
-parses a script and reports syntax errors, which is real value on a box whose
-whole job is editing GDScript blind.
+The mono build is deliberately not the one installed: this machine edits
+GDScript and has no dotnet SDK. The asset names differ by a single underscore,
+so `install_godot` keeps `stable_linux` adjacent in its match pattern.
 
 ## What else is being forgotten
 
@@ -563,11 +622,12 @@ Root exists for steps 1–13. It does not exist after step 15.
  9  fwupd run once, by hand — after the gate, firmware is frozen forever
 10  ssh-keygen; pubkey pasted into GitHub from the desktop
 11  User-local, done by setup.sh: claude, nvm, gh, nvim, lazy.nvim and its
-      plugins, yazi
+      plugins, yazi, godot, tree-sitter, gdtoolkit via pipx
 12  Authenticate Claude CLI (paste-code flow); gh auth login --with-token
 13  `apt purge sudo` — remove left it in config-files state
 14  GRUB superuser password set; update-grub; passphrase written on paper
-15  Godot binary: unzip, `--headless --version`, record the result
+15  Godot: DONE 2026-08-11, see the Godot section. 4.7.1 runs headless, the
+      LSP serves on :6005, and it needs libfontconfig1 from apt
 16  REBOOT — then the verification gate below
 ```
 
@@ -584,7 +644,15 @@ failure means fix it now, while root still exists.
 [ ] pkexec is still absent; polkit still not installed
 [ ] git push to a real repo over SSH
 [ ] claude: /logout, then log back in via paste-code. Re-auth REHEARSED
-[ ] nvim opens, treesitter parsers compile, no missing-compiler error
+[ ] nvim opens, and `:TSInstall` actually COMPILES a parser. Check
+      ~/.local/share/nvim/site/parser/ is non-empty rather than trusting
+      the editor to look fine -- auto_install fails silently without the
+      tree-sitter CLI, and this machine shipped with zero parsers
+[ ] `:MasonInstall luaformatter` succeeds and `:Format` formats a Lua buffer;
+      Mason needs the apt-installed `luarocks` command to build it
+[ ] godot --headless --version, and the headless editor binds :6005
+      (godot --headless --editor --path <proj>; ss -ltn | grep 6005)
+[ ] gdformat and gdlint run -- they come from pipx, which is apt-only
 [ ] e() launches yazi and follows it on quit; ls/ll resolve (lsd present)
 [ ] tmux scrollback works (there is no console scrollback)
 [ ] brightnessctl changes brightness without a password
@@ -599,7 +667,6 @@ failure means fix it now, while root still exists.
       it there is no way to ever see why anything failed
 [ ] timedatectl reports synchronised
 [ ] man git renders
-[ ] godot --headless --version, if keeping it
 [ ] dotfiles links all live; debian/setup.sh health check exits 0
 ```
 

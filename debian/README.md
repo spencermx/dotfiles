@@ -37,8 +37,14 @@ in this directory.
 ## Purpose
 
 Portable machine for reading and writing code, git work, and Claude Code
-sessions, used away from the desk. It edits GDScript, commits and pushes; it
-does not run the Godot editor. Rendering and playtesting happen on the Windows
+sessions, used away from the desk. It edits GDScript, commits and pushes.
+
+It *does* run Godot, headlessly: `--headless --check-only --script` for syntax
+and `--headless --editor` for the language server, which gives Neovim
+completion and go-to-definition with no display server involved. Neovim starts
+that editor itself, one per project, on the first `.gd` buffer opened — see
+`common/config/nvim/lua/plugins/mason-lspconfig.lua`. What it does not do is render, playtest or export — no window ever
+opens, export templates are not installed, and that work happens on the Windows
 desktop.
 
 ## Zone rule

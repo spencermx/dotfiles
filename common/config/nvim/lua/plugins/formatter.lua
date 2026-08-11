@@ -79,6 +79,15 @@ return {
                         return { exe = "rustfmt", args = { "--emit=stdout" }, stdin = true }
                     end
                 },
+                -- gdformat comes from gdtoolkit via pipx, not Mason, so it is
+                -- looked up on PATH like rustfmt. Godot's own LSP reports
+                -- documentFormatting = false, so this is the only thing that
+                -- formats GDScript.
+                gdscript = {
+                    function()
+                        return { exe = "gdformat", args = { "-" }, stdin = true }
+                    end
+                },
                 html = {
                     function()
                         return {
