@@ -68,7 +68,7 @@ PACKAGES=(
     tmux vim git openssh-client build-essential python3 curl wget
     ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
     man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
-    procps lsof strace htop ncdu bat brightnessctl acpi
+    procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
 )
 
 # "link location|file in this repo"
@@ -809,7 +809,16 @@ EOF
     fi
 
     if [ -e /sys/class/backlight ] && [ -n "$(ls -A /sys/class/backlight 2>/dev/null)" ]; then
-        skipped "backlight present: $(ls /sys/class/backlight | tr '\n' ' ')"
+        local backlight brightness_file
+        backlight="$(find /sys/class/backlight -mindepth 1 -maxdepth 1 -type l -printf '%f\n' 2>/dev/null | head -1)"
+        brightness_file="/sys/class/backlight/$backlight/brightness"
+        if is_root; then
+            skipped "backlight present: $backlight (write access not checked as root)"
+        elif [ -w "$brightness_file" ]; then
+            skipped "backlight writable: $backlight"
+        else
+            problem "backlight exists but $USER cannot change it -- brightness-udev permissions missing"
+        fi
     else
         problem "no /sys/class/backlight -- brightness cannot be controlled (firmware-amd-graphics?)"
     fi
