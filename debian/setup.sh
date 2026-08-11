@@ -738,9 +738,49 @@ phase_tools() {
         # interactive shell to re-source a profile that PROFILE=/dev/null
         # deliberately made empty.
         if [ -s "$HOME/.nvm/nvm.sh" ]; then
-            added "nvm -> $HOME/.nvm  (then: nvm install --lts)"
+            added "nvm -> $HOME/.nvm"
         else
             problem "nvm install failed"
+            fail_phase tools
+        fi
+    fi
+
+    # nvm by itself provides no node or npm binary. Mason uses npm for bashls,
+    # pyright and ts_ls, so leaving this as a manual "then install Node" step
+    # makes a fresh Neovim install fail while setup still reports success.
+    if [ -s "$HOME/.nvm/nvm.sh" ]; then
+        # shellcheck disable=SC1091
+        export NVM_DIR="$HOME/.nvm"
+        . "$NVM_DIR/nvm.sh"
+        if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+            skipped "Node present ($(node --version))"
+        elif [ "$DRY_RUN" -eq 1 ]; then
+            printf '   %s? install Node LTS through nvm%s\n' "$C_SKIP" "$C_OFF"
+        else
+            added "installing Node LTS through nvm"
+            nvm install --lts \
+                || { problem "Node install failed"; fail_phase tools; }
+        fi
+    fi
+
+    # The shared config requires lazy.nvim on its first line. Installing the
+    # nvim binary alone therefore leaves a clean Debian build unable to start.
+    # Keep this path in sync with common/config/nvim/init.lua.
+    local lazy="$HOME/.local/share/nvim/lazy/lazy.nvim"
+    if [ -d "$lazy/.git" ]; then
+        skipped "lazy.nvim present ($lazy)"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? install lazy.nvim and sync Neovim plugins%s\n' "$C_SKIP" "$C_OFF"
+    else
+        added "installing lazy.nvim"
+        if git clone --filter=blob:none --branch=stable \
+            https://github.com/folke/lazy.nvim.git "$lazy"; then
+            added "lazy.nvim -> $lazy"
+            added "syncing Neovim plugins"
+            nvim --headless '+Lazy! sync' +qa \
+                || { problem "Neovim plugin sync failed"; fail_phase tools; }
+        else
+            problem "lazy.nvim install failed"
             fail_phase tools
         fi
     fi
@@ -788,6 +828,18 @@ EOF
     for c in "${EXPECTED_COMMANDS[@]}"; do
         command -v "$c" >/dev/null 2>&1 || problem "command not found: $c"
     done
+
+    local nvim_check
+    if ! command -v nvim >/dev/null 2>&1; then
+        : # Already reported by EXPECTED_COMMANDS.
+    else
+        nvim_check="$(nvim --headless +qa 2>&1)"
+        if [ $? -eq 0 ] && ! printf '%s\n' "$nvim_check" | grep -qE '(^|[^[:alnum:]])E[0-9]+:|Error (detected|in )'; then
+            skipped "Neovim configuration loads"
+        else
+            problem "Neovim configuration does not load -- run nvim to see the error"
+        fi
+    fi
 
     # A display server on this machine is a build failure, not a preference.
     if command -v Xorg >/dev/null 2>&1 || [ -d /usr/lib/xorg ] || command -v weston >/dev/null 2>&1; then
