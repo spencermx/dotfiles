@@ -31,12 +31,6 @@ For any assistant continuing this work:
   Determine what Claude CLI supports natively before changing shell or tmux
   configuration. Keep it legible on the limited Linux-console color palette.
 
-- [ ] Add battery status to the persistent screen status area.
-  Show useful battery information alongside the clock in tmux's bottom-right
-  status bar. At minimum include charge percentage; discuss whether charging
-  state and estimated remaining time are useful before deciding the final
-  format. Avoid expensive commands running every second.
-
 - [ ] Resolve the tmux plugin-manager configuration.
   The shared tmux config declares TPM and tmux-resurrect, but TPM was not
   installed on this Debian machine and config reloads previously reported
@@ -72,3 +66,8 @@ where the implementation lives and, when available, its commit ID.
 
 - [x] Console-safe Neovim and Yazi presentation.
   Tested on the real console and committed in `d2c1ba9` and `12c5fc8`.
+
+- [x] Battery status in tmux's bottom-right status area.
+  Reads capacity and charging state directly from sysfs every 15 seconds via
+  `debian/bin/tmux-battery`; tested on the real console and committed in
+  `c5b82d1`.
