@@ -32,7 +32,10 @@ vim.opt.virtualedit = "block" -- Allow cursor movement in block selection mode (
 -- Live command preview and search behavior
 vim.opt.inccommand = "split" -- Show a live preview of search/replace commands in a split window.
 vim.opt.ignorecase = true -- Ignore case when searching (case-insensitive search).
-vim.opt.termguicolors = true -- Enable 24-bit RGB colors (better color support).
+-- The Linux text console cannot faithfully display RGB colors. Inside tmux,
+-- TERM only says screen-256color, so Debian's shell supplies an explicit
+-- marker rather than making this shared config guess where it is running.
+vim.opt.termguicolors = vim.env.DOTFILES_CONSOLE ~= "1"
 
 -- Set leader key (used to create custom keybindings)
 vim.g.mapleader = " " -- Set the leader key to the spacebar.

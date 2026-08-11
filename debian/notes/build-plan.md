@@ -367,7 +367,9 @@ entire class of post-gate failure — a Node major-version bump can never strand
 the CLI.
 
 Node is still wanted for TypeScript work, so install it with `nvm` under
-`~/.nvm`. New versions install without root forever.
+`~/.nvm`, then setup installs the current long-term-support Node release through
+nvm. New versions install without root forever. Installing nvm without a Node
+version is not sufficient: Mason needs `npm` for bashls, pyright, and ts_ls.
 
 Never `apt install nodejs` on this machine. An apt-installed Node puts globals
 in `/usr/lib/node_modules`, which npm cannot write to once `sudo` is gone.
@@ -560,7 +562,8 @@ Root exists for steps 1–13. It does not exist after step 15.
  8    - then it hands links and tools back to your own account
  9  fwupd run once, by hand — after the gate, firmware is frozen forever
 10  ssh-keygen; pubkey pasted into GitHub from the desktop
-11  User-local, done by setup.sh: claude, nvm, gh, nvim, yazi
+11  User-local, done by setup.sh: claude, nvm, gh, nvim, lazy.nvim and its
+      plugins, yazi
 12  Authenticate Claude CLI (paste-code flow); gh auth login --with-token
 13  `apt purge sudo` — remove left it in config-files state
 14  GRUB superuser password set; update-grub; passphrase written on paper

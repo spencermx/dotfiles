@@ -27,6 +27,12 @@ shopt -s histappend checkwinsize
 # installs is frozen at security patches, so a user-local copy must win.
 export PATH="$HOME/.local/bin:$HOME/.local/share/nvim/mason/bin:$PATH"
 
+# Programs started here are displayed on the Linux text console, even when
+# tmux makes TERM look like an ordinary screen-256color terminal. Shared
+# configs use this explicit marker instead of guessing from TERM and changing
+# their appearance on graphical machines or over SSH.
+export DOTFILES_CONSOLE=1
+
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
