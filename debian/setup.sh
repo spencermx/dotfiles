@@ -32,6 +32,15 @@ case ":$PATH:" in
     *) PATH="$HOME/.local/bin:$PATH" ;;
 esac
 
+# Debian keeps usermod, setupcon, ifdown and dhcpcd in /usr/sbin, which is on
+# root's PATH only in a *login* shell. Neither `su -c` nor `su` then ./setup.sh
+# gives one, so those commands are simply not found -- and `usermod` failing is
+# silent enough to look like it worked.
+case ":$PATH:" in
+    *":/usr/sbin:"*) ;;
+    *) PATH="$PATH:/usr/sbin:/sbin" ;;
+esac
+
 #---------------------------------------------------------------------------
 # Configuration
 #---------------------------------------------------------------------------
