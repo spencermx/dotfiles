@@ -82,45 +82,61 @@ stricter choice: it leaves reimaging from the recovery USB as the only path.
 normal boot unattended — add `--unrestricted` to the default menuentry if a
 boot prompt appears.
 
-## The second escalation path: pkexec
+## The second escalation path: pkexec — closed, because polkit is not installed
 
-NetworkManager pulls in polkit, and polkit ships `pkexec`, which is setuid
-root. `pkexec` authorises against `org.freedesktop.policykit.exec`, which on
-Debian requires an *administrator* identity — by default, members of the `sudo`
-group. Purging the `sudo` **package** does not empty the `sudo` **group**.
+polkit ships `pkexec`, which is setuid root. It authorises against
+`org.freedesktop.policykit.exec`, which on Debian requires an *administrator*
+identity — by default, members of the `sudo` group. Purging the `sudo`
+**package** does not empty the `sudo` **group**, so an account left in that
+group gets root from `pkexec` for its own password after `sudo` is gone.
 
-If the account stays in that group, `pkexec` grants root for the user's own
-password after `sudo` is gone. Whole gate bypassed.
+**On this machine the path does not exist at all: there is no polkit.**
+`network-manager` only *recommends* `polkitd`, and `setup.sh` installs with
+`--no-install-recommends`, so it never arrived. `/usr/bin/pkexec` is absent and
+`systemctl is-active polkit` reports `inactive`.
 
-On this machine the account was never added to that group, because Debian only
-does so when the root password is left blank. Verify with `id` rather than
-assume; if it ever appears there, `deluser <user> sudo` removes it.
+That is not an accident to be tidied up — it is now load-bearing, and
+`auth-polkit=false` in the NetworkManager config is what lets it stay that way.
+See the wifi section below: the obvious way to let an unprivileged user drive
+NetworkManager is a polkit rule, and taking that route would install `pkexec`
+on this machine to solve a problem that has a solution not requiring it.
 
-With root locked and the account in no admin group, polkit has no identity to
-authenticate as and `pkexec` fails closed. That is durable — unlike
-`chmod u-s /usr/bin/pkexec`, which a polkit package update from
-unattended-upgrades silently restores.
+Two things to keep true, both verifiable rather than assumed:
 
-## Purge mechanism — superseded: sudo was never installed
+- `command -v pkexec` finds nothing, and no package pulls `polkitd` back in.
+  If one ever does, the account being in no admin group is the fallback that
+  makes it fail closed — that is durable, unlike `chmod u-s /usr/bin/pkexec`,
+  which a package update silently restores.
+- `id` shows the account in no admin group. It is not in `sudo` today. If it
+  ever appears there, `deluser <user> sudo` removes it.
 
-The build took the root-password path at install time rather than the blank
-one, so Debian did not install `sudo` and did not put the user in the `sudo`
-group. All build work is done from `su -`.
+## Purge mechanism — sudo was installed, then removed but not purged
 
-That is better than installing sudo and purging it later, and the difference
-is not cosmetic:
+An earlier version of this section claimed `sudo` was never installed. That was
+wrong, and apt's own log says so:
 
-- there is no `sudo` package on disk for a future unattended-upgrade to
-  unpack again
-- nothing has to be removed at the gate, so the gate cannot half-fail
-- the user is in no admin group, so `pkexec` has no identity to authenticate
-  against and fails closed without any action being taken
+```
+2026-08-09 14:59:33  apt install sudo
+2026-08-09 15:02:17  apt remove sudo
+```
 
-The gate reduces to locking root. Keep the reasoning below anyway: if this
-machine is ever rebuilt down the blank-root-password path, `apt purge sudo` is
-the right removal and `rm /usr/bin/sudo` is not — `rm` leaves dpkg believing
-the package is installed, and the next security update of `sudo` unpacks the
-binary again and quietly reopens the door.
+`dpkg-query -W -f='${Status}' sudo` therefore reports `deinstall ok
+config-files`: the binary is gone, `/etc/sudoers` and friends are not. The
+build did take the root-password path at install time, so Debian never put the
+user in the `sudo` group — `getent group sudo` is empty and `id` confirms it —
+but the package itself did get installed and manually removed.
+
+**Before the gate, run `apt purge sudo`.** `remove` is not `purge`; it leaves
+the conffiles behind and leaves the package in a state that is one
+`apt install` from working again. Purge clears it.
+
+The rule this replaces is still the one that matters if the machine is ever
+rebuilt: `apt purge sudo` is the right removal and `rm /usr/bin/sudo` is not.
+`rm` leaves dpkg believing the package is installed, and the next security
+update of `sudo` unpacks the binary again and quietly reopens the door.
+
+With that done the gate reduces to locking root, because the user is in no
+admin group and — see above — there is no polkit either.
 
 ### `passwd -l root` vs `usermod --expiredate 1`
 
@@ -176,9 +192,10 @@ Unattended-Upgrade::Origins-Pattern {
 - **`-updates` as well as security.** Point releases carry `ca-certificates`
   and `tzdata`, and stale versions of either eventually break TLS.
 - **No automatic reboot.** A machine that reboots itself mid-sentence in a
-  library is worse than a delayed kernel patch. Reboot manually — `systemctl
-  reboot` still works without `sudo`, because logind's polkit action allows an
-  active local session. Verify this at the gate rather than assuming it.
+  library is worse than a delayed kernel patch. Reboot manually — but see the
+  warning below: the usual reason `systemctl reboot` works without `sudo` is
+  logind's *polkit* action for an active local session, and this machine has
+  no polkit. Do not assume it; test it.
 
 Enable and prove it:
 
@@ -221,8 +238,18 @@ Confirmed on the actual machine (`lspci`, `/proc/cpuinfo`): AMD Ryzen 5 PRO
 ```
 linux-image-amd64 firmware-linux firmware-mediatek firmware-realtek
 firmware-amd-graphics firmware-misc-nonfree amd64-microcode
-grub-efi-amd64 efibootmgr cryptsetup lvm2
+grub-efi-amd64 efibootmgr
 ```
+
+**No `cryptsetup`, no `lvm2`, no LUKS.** Full-disk encryption was considered
+and declined: the disk holds configuration and git working copies, all of it
+pushed elsewhere, and nothing that would matter if the drive were read. The
+consequence is recorded rather than hidden — an unencrypted root means anyone
+who removes the NVMe and mounts it on another machine can edit `/etc/shadow`
+and walk past the locked root account, the GRUB password and the absent `sudo`
+in one step. That is a screwdriver and any Linux box, which is a lower bar than
+the rest of this document sets. It is the accepted cost of not encrypting; the
+partition layout is plain `ext4` root plus plain swap.
 
 - **`firmware-mediatek`** drives the MT7922 through `mt7921e`, in-kernel since
   5.15 and trixie ships 6.12. It is in `non-free-firmware`, which the official
@@ -360,34 +387,68 @@ To summarise what does *not* come from apt: `claude`, `node` (nvm), `gh`,
 `nvim`, `yazi`, and Mason's LSP servers. All in `$HOME`, all updatable with no
 root, forever.
 
-### 3. Joining a new wifi network after the gate
+### 3. Joining a new wifi network after the gate — solved, in two settings
 
 This is the one that decides whether the machine works in a library at all,
 and it is easy to miss because the network you provisioned on keeps working.
+It was in fact missed: `network-manager` was installed and the machine still
+could not join a network as the user, for two independent reasons that both
+had to be found before either mattered.
 
-NetworkManager's `org.freedesktop.NetworkManager.settings.modify.system`
-defaults to requiring administrator authentication. With `sudo` purged and root
-locked there is no administrator, so `nmcli device wifi connect` on a new
-network fails and **the machine is bricked for its stated purpose**.
+**Installing `nmcli` is not enough.** A console-only netinst has no desktop
+task, so the installer writes the wifi SSID and PSK into
+`/etc/network/interfaces` (`root:root`, mode 0600) and the machine boots on
+`ifupdown` → `wpa_supplicant` → `dhcpcd`. Debian's NetworkManager ships
+`plugins=ifupdown,keyfile` with `[ifupdown] managed=false`, which means it
+deliberately stands aside from any interface configured in that file. `nmcli
+device status` reports the card as `unmanaged` and NM will not touch it. A
+desktop install does not hit this, because there the installer leaves
+`/etc/network/interfaces` holding nothing but `lo`.
 
-Write an explicit rule before the gate rather than relying on Debian's
-`netdev` defaults:
+**And being allowed to command it is a separate problem.** NM asks polkit
+whether an unprivileged caller may change anything. There is no polkit here
+(see the pkexec section) so there is nothing to ask, and
+`nmcli general permissions` answers `unknown` to everything.
 
-```javascript
-// /etc/polkit-1/rules.d/50-nm-console.rules
-polkit.addRule(function(action, subject) {
-    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 &&
-        subject.user === "<user>") {
-        return polkit.Result.YES;
-    }
-});
+Both are fixed by one file, written by `setup.sh`:
+
+```ini
+# /etc/NetworkManager/conf.d/10-console.conf
+[main]
+plugins=keyfile
+auth-polkit=false
 ```
 
-trixie's polkit no longer reads the old `.pkla` files, so it must be a `.rules`
-file. Verify with `pkcheck --action-id
-org.freedesktop.NetworkManager.settings.modify.system --process $$`, and then
-verify for real: at the gate, connect to a phone hotspot the machine has never
-seen, as the unprivileged user, with `sudo` already gone from the picture.
+`plugins=keyfile` drops the ifupdown plugin, so NM stops treating
+`/etc/network/interfaces` as authoritative and will manage the card.
+`auth-polkit=false` tells NM to allow local callers directly instead of
+consulting a daemon that does not exist. The alternative — install `polkitd`
+and write a `.rules` file granting the user
+`org.freedesktop.NetworkManager.*` — works too, and was rejected because it
+puts setuid-root `pkexec` on the machine to solve a problem that has a
+solution not requiring it. One user, no display server, no `sshd`: there is
+nobody else on this box for polkit to distinguish between.
+
+Handing the card over is a one-time migration, since the credentials only
+exist in the root-only file. `setup.sh`'s `nm_takeover()` copies them into an
+NM profile *first*, then `systemctl disable --now networking` and restarts NM,
+so the machine is offline for seconds. It is guarded on the device actually
+being `unmanaged`, so re-running the script can never tear down a working
+connection. **`/etc/network/interfaces` is never modified** — that file is the
+way back if NM fails to reconnect.
+
+Verified on 2026-08-10, as the unprivileged user, with no password:
+
+```
+nmcli device wifi list                     # four APs listed
+nmcli -t general permissions               # settings.modify.system:yes
+nmcli connection add type wifi ...         # created, then deleted
+```
+
+Creating and deleting a system connection is the exact operation a new network
+needs, so the authorisation half is proven. The remaining test is a real
+association with a network the machine has never seen — a phone hotspot, at
+the gate.
 
 ## Godot — the decision is not one-way
 
@@ -416,7 +477,9 @@ whole job is editing GDScript blind.
 ## What else is being forgotten
 
 1. **GRUB password.** See the top. Everything else is detail next to it.
-2. **`pkexec` via the `sudo` group.** Second root path, survives the purge.
+2. **`pkexec` via the `sudo` group.** Second root path, survives the purge —
+   closed here only because polkit is not installed. Anything that installs
+   `polkitd` reopens it.
 3. **Kernel autoremove**, or `/boot` fills and updates stop silently.
 4. **Clock sync**, or TLS fails everywhere at once with a misleading error.
 5. **Backlight via `video` group**, or brightness is frozen at boot value.
@@ -432,9 +495,18 @@ whole job is editing GDScript blind.
    and media to arrive on a machine designed so they cannot. Consequence,
    accepted: after the gate this machine reads nothing from USB, and
    everything arrives over the network through git.
-10. **Reboot/poweroff without sudo** works through logind's polkit action for
-    an active local session — but verify it at the gate, because everything
-    else about the purge depends on being able to reboot for kernel patches.
+10. **Reboot/poweroff without sudo — now an open question, and a serious one.**
+    The usual answer is logind's polkit action for an active local session.
+    There is no polkit on this machine, and systemd denies a non-root caller
+    when it cannot reach one. If `systemctl reboot` fails for the user, kernel
+    security patches never take effect and unattended-upgrades is decorative.
+
+    Test it as the user, before the gate. If it is denied, the fallback needs
+    no polkit and no root: logind's `HandlePowerKey` defaults to a clean
+    `poweroff` on a physical power-button press, so the button is a working
+    shutdown path regardless. `/etc/systemd/logind.conf` can set
+    `HandlePowerKey=reboot` instead, and it is root-owned — so like the console
+    font, it has to be decided before the gate closes.
 
 ## Ordered checklist
 
@@ -443,21 +515,21 @@ Root exists for steps 1–13. It does not exist after step 15.
 ```
  1  Install trixie, netinst, no desktop at tasksel
       confirm wifi chipset in the installer shell first
- 2  Disk: LUKS full-disk encryption, passphrase decided now
- 3  apt install every package above; verify no X/Wayland was pulled in
- 4  Locale, keyboard, console font (Terminus 16x32)
- 5  systemd-timesyncd enabled; `timedatectl` shows synchronised
- 6  NetworkManager + the polkit .rules file; user added to netdev, video
- 7  unattended-upgrades configured per above; --dry-run clean
- 8  tlp enabled; fwupd run once
- 9  GRUB superuser password set; update-grub; passphrase written on paper
+ 2  Disk: plain ext4 plus swap. Encryption declined, see the package list
+ 3  Clone dotfiles; `su -c debian/setup.sh` does 4-8 and 11 in one pass
+ 4    - every package above; verify no X/Wayland was pulled in
+ 5    - console font (Terminus 16x32); systemd-timesyncd
+ 6    - NetworkManager takes the wifi card; user added to netdev, video
+ 7    - unattended-upgrades; tlp
+ 8    - then it hands links and tools back to your own account
+ 9  fwupd run once, by hand — after the gate, firmware is frozen forever
 10  ssh-keygen; pubkey pasted into GitHub from the desktop
-11  User-local binaries into ~/.local/bin: claude (native installer),
-      nvm + node, gh, nvim, yazi
+11  User-local, done by setup.sh: claude, nvm, gh, nvim, yazi
 12  Authenticate Claude CLI (paste-code flow); gh auth login --with-token
-13  Clone repos; run debian/setup.sh --dry-run then for real
-14  Godot binary: unzip, `--headless --version`, record the result
-15  REBOOT — then the verification gate below
+13  `apt purge sudo` — remove left it in config-files state
+14  GRUB superuser password set; update-grub; passphrase written on paper
+15  Godot binary: unzip, `--headless --version`, record the result
+16  REBOOT — then the verification gate below
 ```
 
 ### The gate
@@ -466,8 +538,11 @@ Every line must pass, as the unprivileged user, after a real reboot. Any
 failure means fix it now, while root still exists.
 
 ```
-[ ] wifi reconnects unattended at boot
-[ ] connect to a NEVER-SEEN network (phone hotspot) as the user
+[ ] wifi reconnects unattended at boot — NetworkManager is now solely
+      responsible for this; networking.service is disabled
+[ ] connect to a NEVER-SEEN network (phone hotspot) as the user:
+      nmcli device wifi connect "<SSID>" --ask
+[ ] pkexec is still absent; polkit still not installed
 [ ] git push to a real repo over SSH
 [ ] claude: /logout, then log back in via paste-code. Re-auth REHEARSED
 [ ] nvim opens, treesitter parsers compile, no missing-compiler error
@@ -485,6 +560,7 @@ failure means fix it now, while root still exists.
 Only then:
 
 ```
+apt purge sudo
 passwd -l root
 usermod --expiredate 1 root
 reboot        # and confirm the checklist still passes
@@ -506,7 +582,16 @@ Three known conflicts to resolve while writing them:
 | `repo` | exists in zsh (`mac/`) and PowerShell (`windows/`) only; `archlinux/config/.bashrc` has aliases and no `repo`. It needs a bash port, and it depends on `gh` |
 | `fdfind` / `batcat` | Debian's renamed binaries. Alias in the shell config, not via a root-owned symlink in `/usr/local/bin` — that would be unfixable after the gate |
 
-`setup.sh` for this zone gets written once the machine is up and the package
-list has survived contact. It splits differently from its siblings: a
-root-requiring `packages` phase that can only ever run pre-gate, and
-`links`/`tools` phases that stay re-runnable forever.
+`setup.sh` exists and has survived contact with the machine. It splits
+differently from its siblings: `packages` and `system` need root and can only
+ever run pre-gate, while `links` and `tools` stay re-runnable forever. Because
+no single account can do both, a root run finishes by re-invoking the script as
+the user — so `su -c ./setup.sh` provisions the whole machine, and plain
+`./setup.sh`, the only form that survives the gate, does the two phases that
+need no root.
+
+Two Debian-specific details it has to carry, both of which bit during the
+build: `fd-find` and `bat` install as `fdfind` and `batcat`, aliased in the
+shell config rather than symlinked into `/usr/local/bin` where they could never
+be fixed afterwards; and the health check has to look for the Debian names,
+because a script cannot see a shell alias.
