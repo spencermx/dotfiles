@@ -1,0 +1,46 @@
+# Console-safe Yazi theme. The Linux console has no Nerd Font fallback, so the
+# default private-use icons and Powerline separators render as blocks.
+
+[tabs]
+sep_inner = { open = "[", close = "]" }
+sep_outer = { open = "", close = "" }
+
+[indicator]
+padding = { open = "[", close = "]" }
+
+[status]
+sep_left  = { open = "[", close = "]" }
+sep_right = { open = "[", close = "]" }
+
+[which]
+separator = " -> "
+
+[notify]
+icon_info  = "i"
+icon_warn  = "W"
+icon_error = "E"
+
+[cmp]
+icon_file    = "-"
+icon_folder  = "d"
+icon_command = ">"
+
+[help]
+icon_info  = "i"
+icon_warn  = "W"
+icon_error = "E"
+
+# Replace Yazi's complete nvim-web-devicons table rather than prepending a few
+# rules; otherwise named files such as .gitignore still select Nerd glyphs.
+[icon]
+globs = []
+dirs  = []
+files = []
+exts  = []
+conds = [
+	{ if = "orphan", text = "!", fg = "red" },
+	{ if = "link",   text = "@", fg = "cyan" },
+	{ if = "dir",    text = "d", fg = "blue" },
+	{ if = "exec",   text = "*", fg = "green" },
+	{ if = "!dir",   text = "-" },
+]

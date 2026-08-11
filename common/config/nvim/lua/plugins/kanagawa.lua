@@ -23,6 +23,8 @@ return {
             highlight StatusLineNC          cterm=NONE ctermfg=8  ctermbg=0
             highlight CursorLineNr          cterm=bold ctermfg=11 ctermbg=NONE
             highlight LineNr                cterm=NONE ctermfg=8  ctermbg=NONE
+            highlight Comment               cterm=NONE ctermfg=10 ctermbg=NONE
+            highlight @comment               cterm=NONE ctermfg=10 ctermbg=NONE
             highlight Visual                cterm=NONE ctermfg=NONE ctermbg=4
             highlight NvimTreeCursorLine    cterm=NONE ctermfg=NONE ctermbg=8
         ]])
