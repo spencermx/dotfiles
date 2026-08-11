@@ -510,21 +510,36 @@ whole job is editing GDScript blind.
     downloads kernel patches that can never take effect. Found only because the
     plan said "verify this rather than assume it" and it got verified.
 
-    The fix needs nothing installed. `HandlePowerKey=poweroff` is logind's
-    compile-time default and is active, and logind handles the key press
-    *itself* — there is no D-Bus request, so there is nothing for polkit to
-    deny. Pressing the power button is a clean shutdown, not a power cut. Two
-    `Power Button` input devices are present on this ThinkPad.
+    **The power button was the intended answer and does not work here.**
+    `HandlePowerKey=poweroff` is logind's active default, logind logs that it
+    is `Watching system buttons on /dev/input/event5` and `event8`, and it
+    demonstrably reacts to the lid switch on the same mechanism. But a short
+    tap produces no input event at all — measured three times, decoding raw
+    `struct input_event` reads — and a long hold is the firmware's force-off,
+    which cuts power below the OS and risks the filesystem. Whatever window
+    exists between the two, the embedded controller did not produce an ACPI
+    event in it. Do not spend another evening on this.
 
-    So: press the button, then power on. `debian/config/.bashrc` defines
-    `reboot` and `poweroff` as functions that try the command and print this
-    instruction when it is refused.
+    **What is actually installed:** a directory the user owns, watched by
+    root-owned path units.
 
-    The rejected alternative was a root-owned systemd `.path` unit watching a
-    file the user can touch, with `reboot` aliased to `touch`. It works and
-    needs no polkit, but it permanently wires an unprivileged trigger to a root
-    action on a machine built to not have any — a bad trade for one button
-    press. If it is ever wanted, it has to be built **before** the gate.
+    ```
+    /etc/tmpfiles.d/user-power.conf        d /run/user-power 0700 <user> <user>
+    /etc/systemd/system/user-reboot.path   PathExists=/run/user-power/reboot
+    /etc/systemd/system/user-reboot.service rm the trigger, then systemctl reboot
+    ```
+
+    …and the same pair for `poweroff`. `debian/config/.bashrc` defines `reboot`
+    and `poweroff` as functions that `touch` the trigger file. No polkit, no
+    `pkexec`, no root.
+
+    The cost is real and worth stating plainly: this is the one unprivileged
+    trigger for a root action on the machine. It does exactly two things and
+    both of them are "turn the computer off" — which the user can already do
+    by holding the power button, just less cleanly. Against that, the
+    alternative was a machine that downloads kernel patches it can never
+    apply. Note that it is **root-owned and must exist before the gate**;
+    afterwards it cannot be added, changed, or repaired.
 
 ## Ordered checklist
 
@@ -567,10 +582,11 @@ failure means fix it now, while root still exists.
 [ ] e() launches yazi and follows it on quit; ls/ll resolve (lsd present)
 [ ] tmux scrollback works (there is no console scrollback)
 [ ] brightnessctl changes brightness without a password
-[ ] PRESS THE POWER BUTTON. It must produce a clean shutdown, because
-      `systemctl reboot` is denied for the user and this is the only way
-      a kernel update ever takes effect. Never tested before the gate = the
-      machine may be unable to apply the patches it downloads
+[ ] `reboot` as the user actually reboots — via /run/user-power, not
+      systemctl, which is denied here. This is the ONLY way a kernel
+      update ever takes effect. Untested before the gate = a machine that
+      downloads patches it can never apply
+[ ] `poweroff` as the user actually powers off
 [ ] unattended-upgrade --dry-run exits clean
 [ ] timedatectl reports synchronised
 [ ] man git renders

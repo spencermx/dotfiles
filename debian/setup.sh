@@ -266,9 +266,16 @@ nm_takeover() {
         return
     fi
 
-    state="$(nmcli -t -f DEVICE,STATE device status 2>/dev/null | awk -F: -v d="$wifi" '$1==d{print $2}')"
-    if [ "$state" != "unmanaged" ]; then
-        skipped "$wifi already NetworkManager's ($state)"
+    # The guard is the ifupdown stanza, not the device state. Disabling
+    # networking.service is NOT enough: ifupdown ships a udev rule that runs
+    # `ifup` when the interface appears, so an `allow-hotplug` stanza starts
+    # its own wpa_supplicant and dhcpcd at every boot, and NM is left holding
+    # a device it is nominally managing but cannot use. Commenting the stanza
+    # out is what actually ends the handover -- and makes this a no-op after.
+    if ! grep -qE "^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]]+$wifi([[:space:]]|\$)" \
+        /etc/network/interfaces 2>/dev/null; then
+        state="$(nmcli -t -f DEVICE,STATE device status 2>/dev/null | awk -F: -v d="$wifi" '$1==d{print $2}')"
+        skipped "$wifi already handed over ($state)"
         return
     fi
 
@@ -287,12 +294,49 @@ nm_takeover() {
     fi
 
     warned "handing $wifi to NetworkManager -- the connection drops for a few seconds"
-    run nmcli connection add type wifi con-name "$ssid" ifname "$wifi" ssid "$ssid" \
-        wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk" connection.autoconnect yes \
-        || { problem "could not create the NM profile -- nothing was torn down"; fail_phase system; return; }
 
-    # /etc/network/interfaces is deliberately not touched. It is the way back.
+    # Only add the profile if there is not one already. The guard above is the
+    # ifupdown stanza, so this runs again on a machine that was half-migrated,
+    # and nmcli will happily create a second profile with the same name.
+    if nmcli -t -f NAME connection show 2>/dev/null | grep -qxF "$ssid"; then
+        skipped "NM profile '$ssid' already exists"
+    else
+        run nmcli connection add type wifi con-name "$ssid" ifname "$wifi" ssid "$ssid" \
+            wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk" connection.autoconnect yes \
+            || { problem "could not create the NM profile -- nothing was torn down"; fail_phase system; return; }
+    fi
+
+    # Comment the stanza out rather than delete it: the credentials stay
+    # readable as the way back, but ifupdown's udev rule no longer has anything
+    # to act on. Disabling the service alone leaves that rule live.
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? comment out the %s stanza in /etc/network/interfaces%s\n' \
+            "$C_SKIP" "$wifi" "$C_OFF"
+    else
+        cp /etc/network/interfaces /etc/network/interfaces.pre-nm
+        awk -v ifn="$wifi" '
+            BEGIN { inblk = 0 }
+            {
+                if ($0 ~ "^[[:space:]]*(auto|allow-hotplug)[[:space:]]+" ifn "([[:space:]]|$)" ||
+                    $0 ~ "^[[:space:]]*iface[[:space:]]+" ifn "[[:space:]]") {
+                    inblk = 1; print "#" $0; next
+                }
+                if (inblk) {
+                    if ($0 ~ /^[[:space:]]*$/) { inblk = 0; print; next }
+                    if ($0 ~ /^[[:space:]]/)   { print "#" $0; next }
+                    inblk = 0
+                }
+                print
+            }
+        ' /etc/network/interfaces.pre-nm > /etc/network/interfaces \
+            && added "commented out the $wifi stanza (backup: /etc/network/interfaces.pre-nm)"
+    fi
+
     run systemctl disable --now networking
+    # Whatever ifupdown already started is still holding the card.
+    run ifdown "$wifi" 2>/dev/null
+    run pkill -f "wpa_supplicant.*-i[[:space:]]*$wifi" 2>/dev/null
+    run dhcpcd -k "$wifi" 2>/dev/null
     run systemctl restart NetworkManager
 
     [ "$DRY_RUN" -eq 1 ] && return
@@ -435,6 +479,64 @@ Unattended-Upgrade::Automatic-Reboot "false";'
     else
         run systemctl enable --now unattended-upgrades || fail_phase system
     fi
+
+    # -- reboot and poweroff after the gate ---------------------------------
+    # `systemctl reboot` asks logind, logind asks polkit, and there is no
+    # polkit -- so it is denied for the user. After the gate there is no root
+    # to su to either. Without a mechanism, unattended-upgrades downloads
+    # kernel patches that can never take effect and the whole update story is
+    # decorative.
+    #
+    # The power button was meant to be the answer and could not be made to
+    # work on this hardware: a short tap raises no input event at all, and a
+    # long hold is the firmware's force-off, which cuts power below the OS.
+    #
+    # So: a directory the user owns, a path unit watching it, and a service
+    # doing the privileged part. This is the only unprivileged trigger for a
+    # root action on this machine. It does exactly two things and both of them
+    # are "turn the computer off" -- which the user can already do by holding
+    # the button in, just less cleanly.
+    write_file /etc/tmpfiles.d/user-power.conf \
+"# Written by debian/setup.sh. The trigger directory for user-{reboot,poweroff}.
+d /run/user-power 0700 $user $user -"
+    run systemd-tmpfiles --create /etc/tmpfiles.d/user-power.conf
+
+    local act
+    for act in reboot poweroff; do
+        write_file "/etc/systemd/system/user-$act.path" \
+"# Written by debian/setup.sh.
+[Unit]
+Description=Watch for an unprivileged request to $act
+
+[Path]
+PathExists=/run/user-power/$act
+
+[Install]
+WantedBy=paths.target"
+
+        write_file "/etc/systemd/system/user-$act.service" \
+"# Written by debian/setup.sh. Started by user-$act.path, never enabled itself.
+[Unit]
+Description=$act, requested by the console user
+
+[Service]
+Type=oneshot
+# Remove the trigger first, so a failed $act cannot leave a file that
+# re-fires this unit on every path event forever.
+ExecStart=/bin/rm -f /run/user-power/$act
+ExecStart=/usr/bin/systemctl $act"
+    done
+
+    run systemctl daemon-reload
+    for act in reboot poweroff; do
+        if systemctl is-enabled "user-$act.path" >/dev/null 2>&1; then
+            skipped "user-$act.path already enabled"
+        else
+            run systemctl enable --now "user-$act.path" \
+                && added "user-$act.path enabled" \
+                || fail_phase system
+        fi
+    done
 
     # -- power --------------------------------------------------------------
     if systemctl is-enabled tlp >/dev/null 2>&1; then
@@ -612,8 +714,13 @@ phase_tools() {
         printf '   %s? install nvm into ~/.nvm%s\n' "$C_SKIP" "$C_OFF"
     else
         added "installing nvm"
-        if curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh \
-            | PROFILE=/dev/null bash >/dev/null 2>&1; then
+        curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh \
+            | PROFILE=/dev/null bash >/dev/null 2>&1
+        # Judge the outcome, not the exit code: the installer returns non-zero
+        # having installed correctly, because its last act is to tell an
+        # interactive shell to re-source a profile that PROFILE=/dev/null
+        # deliberately made empty.
+        if [ -s "$HOME/.nvm/nvm.sh" ]; then
             added "nvm -> $HOME/.nvm  (then: nvm install --lts)"
         else
             problem "nvm install failed"
@@ -703,7 +810,9 @@ EOF
         case "$wifi_state" in
             "")          problem "nmcli sees no wifi device" ;;
             unmanaged)   problem "wifi is unmanaged by NetworkManager -- cannot join a new network" ;;
-            *)           skipped "wifi is NetworkManager's ($wifi_state)" ;;
+            connected)   skipped "wifi connected, NetworkManager driving" ;;
+            unavailable) problem "wifi is NM-managed but unavailable -- something else holds the card (ifupdown?)" ;;
+            *)           warned "wifi state is '$wifi_state', not connected" ;;
         esac
 
         if is_root; then
