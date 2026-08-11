@@ -13,6 +13,7 @@ return {
                     file = {enable = false, color = false},
                     folder = {enable = false, color = false},
                 },
+                show = {folder = false},
                 symlink_arrow = " -> ",
                 glyphs = {
                     default = "-",
