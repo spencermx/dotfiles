@@ -60,12 +60,30 @@ alias treenod="tree -I 'node_modules'"
 command -v fdfind >/dev/null && alias fd=fdfind
 command -v batcat >/dev/null && alias bat=batcat
 
-# The mac copy is `sudo shutdown -h now`, which is dead here -- sudo is purged.
-# logind's polkit action allows an active local session to do this unprivileged,
-# and that path has to keep working: it is how kernel security updates from
-# unattended-upgrades actually take effect.
-alias poweroff='systemctl poweroff'
-alias reboot='systemctl reboot'
+# These were aliases to `systemctl reboot` / `systemctl poweroff`, on the
+# assumption that logind lets an active local session do it unprivileged. It
+# does -- through a *polkit* action, and there is no polkit on this machine.
+# Both fail with:
+#
+#   Failed to execute /usr/bin/pkttyagent: No such file or directory
+#   Call to Reboot failed: Access denied
+#
+# The power button is the path that works and always will: logind handles the
+# key press itself, so nothing is authorised and nothing can deny it, and it is
+# a clean shutdown rather than a power cut. That matters more than convenience
+# -- it is how a kernel security update from unattended-upgrades takes effect.
+#
+# Try the command anyway: it succeeds while root still exists to be `su`d to,
+# and once it stops working it says what to do instead.
+_shutdown_note() {
+	printf '%s: denied -- no polkit here to authorise it.\n' "$1" >&2
+	printf '  press the power button for a clean poweroff, then power on\n' >&2
+	printf "  or, while root still exists:  su -c 'systemctl %s'\n" "$1" >&2
+	return 1
+}
+
+reboot()   { systemctl reboot   2>/dev/null || _shutdown_note reboot;   }
+poweroff() { systemctl poweroff 2>/dev/null || _shutdown_note poweroff; }
 
 #---------------------------------------------------------------------------
 # Functions

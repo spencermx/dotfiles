@@ -192,10 +192,10 @@ Unattended-Upgrade::Origins-Pattern {
 - **`-updates` as well as security.** Point releases carry `ca-certificates`
   and `tzdata`, and stale versions of either eventually break TLS.
 - **No automatic reboot.** A machine that reboots itself mid-sentence in a
-  library is worse than a delayed kernel patch. Reboot manually — but see the
-  warning below: the usual reason `systemctl reboot` works without `sudo` is
-  logind's *polkit* action for an active local session, and this machine has
-  no polkit. Do not assume it; test it.
+  library is worse than a delayed kernel patch. Reboot manually — **with the
+  power button, not `systemctl reboot`**, which is denied for the user here.
+  See item 10 below; the power button is the mechanism that makes every
+  downloaded patch actually take effect.
 
 Enable and prove it:
 
@@ -495,18 +495,36 @@ whole job is editing GDScript blind.
    and media to arrive on a machine designed so they cannot. Consequence,
    accepted: after the gate this machine reads nothing from USB, and
    everything arrives over the network through git.
-10. **Reboot/poweroff without sudo — now an open question, and a serious one.**
-    The usual answer is logind's polkit action for an active local session.
-    There is no polkit on this machine, and systemd denies a non-root caller
-    when it cannot reach one. If `systemctl reboot` fails for the user, kernel
-    security patches never take effect and unattended-upgrades is decorative.
+10. **Reboot without sudo — tested, and it fails. The power button is the
+    answer.** The usual mechanism is logind's polkit action for an active local
+    session. There is no polkit here, and systemd denies a caller it cannot
+    authorise. Measured on 2026-08-10, as the user:
 
-    Test it as the user, before the gate. If it is denied, the fallback needs
-    no polkit and no root: logind's `HandlePowerKey` defaults to a clean
-    `poweroff` on a physical power-button press, so the button is a working
-    shutdown path regardless. `/etc/systemd/logind.conf` can set
-    `HandlePowerKey=reboot` instead, and it is root-owned — so like the console
-    font, it has to be decided before the gate closes.
+    ```
+    $ systemctl reboot
+    Failed to execute /usr/bin/pkttyagent: No such file or directory
+    Call to Reboot failed: Access denied
+    ```
+
+    That is the whole update story failing quietly: `unattended-upgrades`
+    downloads kernel patches that can never take effect. Found only because the
+    plan said "verify this rather than assume it" and it got verified.
+
+    The fix needs nothing installed. `HandlePowerKey=poweroff` is logind's
+    compile-time default and is active, and logind handles the key press
+    *itself* — there is no D-Bus request, so there is nothing for polkit to
+    deny. Pressing the power button is a clean shutdown, not a power cut. Two
+    `Power Button` input devices are present on this ThinkPad.
+
+    So: press the button, then power on. `debian/config/.bashrc` defines
+    `reboot` and `poweroff` as functions that try the command and print this
+    instruction when it is refused.
+
+    The rejected alternative was a root-owned systemd `.path` unit watching a
+    file the user can touch, with `reboot` aliased to `touch`. It works and
+    needs no polkit, but it permanently wires an unprivileged trigger to a root
+    action on a machine built to not have any — a bad trade for one button
+    press. If it is ever wanted, it has to be built **before** the gate.
 
 ## Ordered checklist
 
@@ -549,7 +567,10 @@ failure means fix it now, while root still exists.
 [ ] e() launches yazi and follows it on quit; ls/ll resolve (lsd present)
 [ ] tmux scrollback works (there is no console scrollback)
 [ ] brightnessctl changes brightness without a password
-[ ] systemctl reboot works without a password
+[ ] PRESS THE POWER BUTTON. It must produce a clean shutdown, because
+      `systemctl reboot` is denied for the user and this is the only way
+      a kernel update ever takes effect. Never tested before the gate = the
+      machine may be unable to apply the patches it downloads
 [ ] unattended-upgrade --dry-run exits clean
 [ ] timedatectl reports synchronised
 [ ] man git renders
