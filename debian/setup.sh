@@ -81,6 +81,7 @@ LINKS=(
     # the shared one, so both links are required.
     "$HOME/.tmux.conf|$REPO_ROOT/config/.tmux.conf"
     "$HOME/.tmux.conf.common|$SHARED_ROOT/config/.tmux.conf"
+    "$HOME/.local/bin/tmux-battery|$REPO_ROOT/bin/tmux-battery"
 
     "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"

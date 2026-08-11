@@ -1,0 +1,29 @@
+#!/bin/sh
+# Compact battery state for the Debian tmux status line.
+#
+# Output examples:
+#   BAT 83%- |   discharging
+#   BAT 83%+ |   charging
+#   BAT 100%= |  full or connected without actively charging
+#
+# Print nothing on a machine without a battery so the tmux clock remains clean.
+
+for battery in /sys/class/power_supply/BAT*; do
+    [ -d "$battery" ] || continue
+    [ -r "$battery/capacity" ] || continue
+
+    capacity="$(cat "$battery/capacity" 2>/dev/null)" || continue
+    status="$(cat "$battery/status" 2>/dev/null)"
+
+    case "$status" in
+        Charging)                    state="+" ;;
+        Discharging)                 state="-" ;;
+        Full|"Not charging")        state="=" ;;
+        *)                           state=""  ;;
+    esac
+
+    printf 'BAT %s%%%s | ' "$capacity" "$state"
+    exit 0
+done
+
+exit 0
