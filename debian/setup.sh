@@ -527,7 +527,7 @@ Unattended-Upgrade::Automatic-Reboot "false";'
         run systemctl enable --now unattended-upgrades || fail_phase system
     fi
 
-    # -- reboot and poweroff after the gate ---------------------------------
+    # -- reboot, poweroff and suspend after the gate ------------------------
     # `systemctl reboot` asks logind, logind asks polkit, and there is no
     # polkit -- so it is denied for the user. After the gate there is no root
     # to su to either. Without a mechanism, unattended-upgrades downloads
@@ -540,16 +540,26 @@ Unattended-Upgrade::Automatic-Reboot "false";'
     #
     # So: a directory the user owns, a path unit watching it, and a service
     # doing the privileged part. This is the only unprivileged trigger for a
-    # root action on this machine. It does exactly two things and both of them
-    # are "turn the computer off" -- which the user can already do by holding
+    # root action on this machine. It does exactly three things and all three
+    # of them are "stop running" -- which the user can already do by holding
     # the button in, just less cleanly.
+    #
+    # `suspend` is here for the same reason as the other two and not for
+    # convenience: logind refuses Suspend() from an unprivileged caller
+    # identically, because it is the same polkit check. It is the mildest of
+    # the three -- nothing is written, nothing is killed, the session is still
+    # there on resume -- so it costs nothing beyond the trigger that already
+    # exists. The kernel here offers s2idle only (/sys/power/mem_sleep reads
+    # [s2idle]); there is no S3, and `disk` would need a swap area sized for
+    # RAM, which this machine does not have.
     write_file /etc/tmpfiles.d/user-power.conf \
-"# Written by debian/setup.sh. The trigger directory for user-{reboot,poweroff}.
+"# Written by debian/setup.sh. The trigger directory for
+# user-{reboot,poweroff,suspend}.
 d /run/user-power 0700 $user $user -"
     run systemd-tmpfiles --create /etc/tmpfiles.d/user-power.conf
 
     local act
-    for act in reboot poweroff; do
+    for act in reboot poweroff suspend; do
         write_file "/etc/systemd/system/user-$act.path" \
 "# Written by debian/setup.sh.
 [Unit]
@@ -569,13 +579,15 @@ Description=$act, requested by the console user
 [Service]
 Type=oneshot
 # Remove the trigger first, so a failed $act cannot leave a file that
-# re-fires this unit on every path event forever.
+# re-fires this unit on every path event forever. This ordering is what makes
+# suspend safe as well: the machine comes back from suspend, and a trigger
+# still sitting there on resume would put it straight back to sleep.
 ExecStart=/bin/rm -f /run/user-power/$act
 ExecStart=/usr/bin/systemctl $act"
     done
 
     run systemctl daemon-reload
-    for act in reboot poweroff; do
+    for act in reboot poweroff suspend; do
         if systemctl is-enabled "user-$act.path" >/dev/null 2>&1; then
             skipped "user-$act.path already enabled"
         else
