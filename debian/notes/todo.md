@@ -39,9 +39,15 @@ For any assistant continuing this work:
   the Debian path so reloads are quiet and honest.
 
 - [ ] Test laptop suspend and resume as the normal user.
-  Test the lid path on battery power, then confirm the console, tmux session,
-  clock, and NetworkManager connection all recover after reopening the lid.
-  Do not combine this with another test that could force the machine off.
+  Two paths now: the lid switch, which logind handles itself and which needs
+  no authorisation, and the `suspend` shell function, which goes through
+  /run/user-power like `reboot` and `poweroff`. Test both on battery power,
+  then confirm the console, tmux session, clock, and NetworkManager connection
+  all recover. Do not combine this with another test that could force the
+  machine off. Note the lid path is untested on this hardware and the power
+  button was already found to raise no input event — if the lid raises none
+  either, the shell function is the only route and must be verified pre-gate,
+  since `user-suspend.path` is root-owned and cannot be added afterwards.
 
 - [ ] Decide whether tmux should show update/reboot state.
   Automatic security updates are enabled, but kernel updates need the manual

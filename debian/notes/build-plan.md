@@ -593,17 +593,29 @@ so `install_godot` keeps `stable_linux` adjacent in its match pattern.
     /etc/systemd/system/user-reboot.service rm the trigger, then systemctl reboot
     ```
 
-    …and the same pair for `poweroff`. `debian/config/.bashrc` defines `reboot`
-    and `poweroff` as functions that `touch` the trigger file. No polkit, no
-    `pkexec`, no root.
+    …and the same pair for `poweroff` and for `suspend`.
+    `debian/config/.bashrc` defines `reboot`, `poweroff` and `suspend` as
+    functions that `touch` the trigger file. No polkit, no `pkexec`, no root.
+
+    `suspend` rides the same mechanism because it hits the same wall: logind's
+    `Suspend()` is a polkit action exactly as `Reboot()` is, so an
+    unprivileged `systemctl suspend` is denied for the same reason and with
+    the same message. It is the mildest of the three — nothing is written,
+    nothing is killed, the session is still there on resume. The trigger is
+    removed *before* the action, which is load-bearing for suspend
+    specifically: the machine comes back, and a trigger left on disk would be
+    seen by the path unit on resume and put it straight back to sleep. The
+    kernel here offers s2idle only — `/sys/power/mem_sleep` reads `[s2idle]`,
+    so there is no S3 — and `disk` (hibernate) would need a swap area sized
+    for RAM, which this machine does not have.
 
     The cost is real and worth stating plainly: this is the one unprivileged
-    trigger for a root action on the machine. It does exactly two things and
-    both of them are "turn the computer off" — which the user can already do
-    by holding the power button, just less cleanly. Against that, the
-    alternative was a machine that downloads kernel patches it can never
-    apply. Note that it is **root-owned and must exist before the gate**;
-    afterwards it cannot be added, changed, or repaired.
+    trigger for a root action on the machine. It does exactly three things and
+    all three are "stop running" — which the user can already do by holding
+    the power button, just less cleanly. Against that, the alternative was a
+    machine that downloads kernel patches it can never apply. Note that it is
+    **root-owned and must exist before the gate**; afterwards it cannot be
+    added, changed, or repaired.
 
 ## Ordered checklist
 

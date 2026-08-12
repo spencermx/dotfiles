@@ -103,6 +103,13 @@ _power_request() {
 reboot()   { _power_request reboot;   }
 poweroff() { _power_request poweroff; }
 
+# `suspend` is a bash *builtin* -- it SIGSTOPs the shell itself, which is how
+# you get back to a parent shell you shelled out of. Defining a function by
+# that name shadows it. That is the intended trade: the builtin refuses in a
+# login shell anyway, and `builtin suspend` still reaches it if it is ever
+# wanted. Sleep is the machine-level meaning of the word here.
+suspend()  { _power_request suspend;  }
+
 #---------------------------------------------------------------------------
 # Functions
 #---------------------------------------------------------------------------
