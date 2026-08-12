@@ -1,0 +1,64 @@
+#!/bin/sh
+# Which user-local tools have fallen behind upstream?
+#
+# Everything in ~/.local/bin is here precisely because apt's copy would be
+# frozen at security patches forever. That only pays off if someone actually
+# updates them, and after the gate this is the only software on the machine
+# that CAN be updated. Nothing reminds you -- so this does.
+#
+# Needs the network. Compares the installed version against the latest GitHub
+# release; a mismatch is a suggestion, not an emergency.
+#
+#   ok      matches upstream
+#   OLD     upstream has moved on -- rerun debian/setup.sh tools
+#   ?       could not determine (offline, or rate-limited by GitHub)
+
+latest() {   # latest() <owner/repo> -> bare version, no leading v
+    curl -fsSL -m 12 "https://api.github.com/repos/$1/releases/latest" 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -1
+}
+
+row() {      # row() <name> <installed> <upstream>
+    if [ -z "$2" ]; then
+        printf '  %-12s \033[90m?\033[0m      not installed\n' "$1"
+    elif [ -z "$3" ]; then
+        printf '  %-12s \033[90m?\033[0m      %s (upstream unknown)\n' "$1" "$2"
+    elif [ "$2" = "$3" ]; then
+        printf '  %-12s \033[32mok\033[0m     %s\n' "$1" "$2"
+    else
+        printf '  %-12s \033[33mOLD\033[0m    %s -> %s\n' "$1" "$2" "$3"
+    fi
+}
+
+ver() { command -v "$1" >/dev/null 2>&1 || return; shift; "$@" 2>/dev/null; }
+
+printf '\nchecking upstream releases...\n\n'
+
+row nvim \
+    "$(ver nvim nvim --version | sed -n '1s/^NVIM v\{0,1\}//p')" \
+    "$(latest neovim/neovim)"
+
+row gh \
+    "$(ver gh gh --version | sed -n '1s/^gh version \([^ ]*\).*/\1/p')" \
+    "$(latest cli/cli)"
+
+row yazi \
+    "$(ver yazi yazi --version | sed -n '1s/^[Yy]azi \([^ ]*\).*/\1/p')" \
+    "$(latest sxyazi/yazi)"
+
+row tree-sitter \
+    "$(ver tree-sitter tree-sitter --version | sed -n '1s/^tree-sitter \([^ ]*\).*/\1/p')" \
+    "$(latest tree-sitter/tree-sitter)"
+
+row godot \
+    "$(ver godot godot --headless --version | sed -n '1s/^\([0-9.]*\)\.stable.*/\1/p')" \
+    "$(latest godotengine/godot | sed 's/-stable$//')"
+
+# claude and node update themselves and are not GitHub releases, so just report.
+c="$(ver claude claude --version | head -1)"
+[ -n "$c" ] && printf '  %-12s \033[90m--\033[0m     %s (self-updating)\n' "claude" "$c"
+n="$(ver node node --version)"
+[ -n "$n" ] && printf '  %-12s \033[90m--\033[0m     %s (nvm install --lts)\n' "node" "$n"
+
+printf '\n  update everything user-local with:  debian/setup.sh tools\n'
+printf '  gdformat/gdlint update with:        pipx upgrade gdtoolkit\n\n'

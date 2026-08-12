@@ -107,6 +107,16 @@ LINKS=(
     "$HOME/.tmux.conf.common|$SHARED_ROOT/config/.tmux.conf"
     "$HOME/.local/bin/tmux-battery|$REPO_ROOT/bin/tmux-battery"
 
+    # Diagnostics. All standard-library or POSIX sh, no apt package behind any
+    # of them, so they keep working after the gate -- which is exactly when
+    # there is no other way left to find out what is wrong.
+    "$HOME/.local/bin/portal|$REPO_ROOT/bin/portal"
+    "$HOME/.local/bin/printers|$REPO_ROOT/bin/printers"
+    "$HOME/.local/bin/netreport|$REPO_ROOT/bin/netreport"
+    "$HOME/.local/bin/gatecheck|$REPO_ROOT/bin/gatecheck"
+    "$HOME/.local/bin/diskreport|$REPO_ROOT/bin/diskreport"
+    "$HOME/.local/bin/toolcheck|$REPO_ROOT/bin/toolcheck"
+
     "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
     "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
@@ -473,12 +483,25 @@ phase_system() {
     # and --no-install-recommends is the only reason network-manager did not
     # drag it in. With nothing to ask, NM must be told to allow local callers
     # directly. One user, no display server, no sshd: nobody else to ask about.
+    # connectivity: without a uri here NM never probes anything. It reports
+    # "full" whenever a default route exists, which is exactly the state you
+    # are in behind a captive portal -- associated, addressed, and going
+    # nowhere. Measured on this machine before the setting existed: `nmcli
+    # networking connectivity` answered "full" instantly and NM logged no
+    # check at all. Debian's network-manager ships no connectivity conf of its
+    # own, so nothing supplies this by default. With it set, the state becomes
+    # "portal" and `debian/bin/portal` has something to agree with.
     if write_file /etc/NetworkManager/conf.d/10-console.conf \
 '# Written by debian/setup.sh -- read the NetworkManager section of
-# notes/build-plan.md before changing either of these.
+# notes/build-plan.md before changing any of these.
 [main]
 plugins=keyfile
-auth-polkit=false' && command -v nmcli >/dev/null 2>&1; then
+auth-polkit=false
+
+[connectivity]
+uri=http://network-test.debian.org/nm
+response=NetworkManager is online
+interval=300' && command -v nmcli >/dev/null 2>&1; then
         run nmcli general reload
     fi
 
