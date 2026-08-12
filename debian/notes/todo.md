@@ -115,10 +115,21 @@ For any assistant continuing this work:
   format GDScript on this machine.
 
 - [ ] Decide on a text browser, before the gate.
-  There is no `w3m`, `lynx` or `links2`, which means captive-portal wifi cannot
-  be logged into at all — the machine associates and then every request hits
-  the portal. `build-plan.md` names a library as the working environment. Also
-  the only way to read HTML docs offline here. apt-only, so one-way.
+  There is no `w3m`, `lynx` or `links2`. `debian/bin/portal` now handles
+  detection and form inspection, but a text browser is still the more robust
+  way through an interactive portal — most are plain HTML forms that `w3m`
+  simply walks. Also the only way to read HTML docs offline here. apt-only,
+  so one-way, and the script does not replace it.
+
+- [ ] Test `debian/bin/portal` against a real captive portal.
+  Written and tested 2026-08-11 against a local imitation portal (302 probe
+  intercept, session cookie, hidden CSRF token, accept checkbox): detection,
+  inspection, reject-without-checkbox and accept-with-it all pass. What that
+  cannot prove is behaviour against a real library portal, which is the only
+  test that counts. Do it before the gate, while a missing apt package can
+  still be installed.
+  Also confirm NM now reports `portal` rather than `full` — the
+  `[connectivity]` block `setup.sh` writes needs a root run to take effect.
 
 - [ ] Decide the rest of the pre-gate apt list.
   `shellcheck` (this repo is a 39 KB bash script), `entr`/`inotify-tools` (no
@@ -128,15 +139,21 @@ For any assistant continuing this work:
   Deliberately excluded: `lazygit`, `shfmt`, `delta` — all ship static
   binaries and stay installable forever.
 
-- [ ] Fix unattended-upgrades to match its own spec.
-  Checked 2026-08-11 and three of the four settings `build-plan.md` calls
-  mandatory are absent. `trixie-updates` is genuinely uncovered — its release
-  is `n=trixie-updates`, and the current pattern only matches `codename=trixie`
-  — so the `ca-certificates`/`tzdata` channel is not being applied. Also
-  missing: `Remove-Unused-Kernel-Packages`, the `--force-confold` dpkg options,
-  and `APT::Periodic::AutocleanInterval` (110 MB of `.debs` cached already, and
-  `apt clean` needs root). Note the plan's `/boot` fear does not apply to this
-  disk — there is no separate `/boot`, it is on a 225 G root at 3%.
+- [ ] Add `APT::Periodic::AutocleanInterval` to `20auto-upgrades`.
+  The only unattended-upgrades setting actually missing. 110 MB of `.deb` files
+  are cached already and `apt clean` needs root, so after the gate this only
+  ever grows. Set it in the same root pass as anything else outstanding.
+
+  Correcting an earlier claim in this file: `-updates` coverage,
+  `Remove-Unused-Kernel-Packages` and the `--force-confold` options were
+  reported missing on 2026-08-11 and are **all present**. They live in
+  `/etc/apt/apt.conf.d/52unattended-upgrades-local`, which `setup.sh` writes
+  precisely because `50unattended-upgrades` is a conffile that would prompt on
+  upgrade if edited in place. Grepping only the `50` file misses them. Grep the
+  whole directory.
+
+  Still true: the plan's `/boot` fear does not apply to this disk — there is no
+  separate `/boot`, it is on a 225 G root at 3%.
 
 - [ ] Decide on a BIOS supervisor password.
   The gate's whole value rests on the GRUB password, but Secure Boot is

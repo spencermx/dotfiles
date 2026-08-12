@@ -1,0 +1,128 @@
+#!/bin/sh
+# Walk the pre-gate verification checklist from notes/build-plan.md.
+#
+# The gate is one-way: after it, `sudo` is purged and root is locked, and
+# anything still broken stays broken until the machine is reimaged. That
+# checklist is currently something you read and test by hand, which is exactly
+# how an item gets missed.
+#
+# Run it as the normal user, after a real reboot. Every FAIL is a thing to fix
+# while root still exists.
+#
+#   FAIL  broken, and unfixable once the gate closes
+#   warn  cannot be decided from here -- test it yourself, it still counts
+#   ok    verified
+#
+# Exit status is the number of FAILs, so `gatecheck && echo clear` works.
+
+fails=0
+ok()   { printf '  \033[32mok  \033[0m %s\n' "$*"; }
+warn() { printf '  \033[33mwarn\033[0m %s\n' "$*"; }
+bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$*"; fails=$((fails + 1)); }
+head() { printf '\n\033[36m== %s\033[0m\n' "$*"; }
+
+head "escalation paths that must not exist"
+command -v pkexec >/dev/null 2>&1 \
+    && bad "pkexec present -- polkit got installed, root path reopened" \
+    || ok "no pkexec"
+[ -f /usr/bin/polkitd ] || [ -d /etc/polkit-1/rules.d ] \
+    && warn "polkit files on disk -- check nothing pulled polkitd back in" \
+    || ok "no polkit"
+case " $(id -Gn) " in
+    *" sudo "*|*" admin "*|*" wheel "*)
+        bad "user is in an admin group -- deluser $(id -un) sudo" ;;
+    *)  ok "user is in no admin group" ;;
+esac
+case "$(dpkg-query -W -f='${Status}' sudo 2>/dev/null)" in
+    *"ok installed"*) warn "sudo still installed -- apt purge sudo at the gate" ;;
+    *config-files*)   warn "sudo removed but not purged -- apt purge sudo" ;;
+    *)                ok "sudo gone" ;;
+esac
+
+head "things that need root and so are pre-gate only"
+case " $(id -Gn) " in
+    *" adm "*)   ok "in adm -- journalctl can read system logs" ;;
+    *)           bad "not in adm -- you will never see why anything failed" ;;
+esac
+case " $(id -Gn) " in
+    *" video "*) ok "in video -- brightness is writable" ;;
+    *)           bad "not in video -- screen brightness frozen at boot value" ;;
+esac
+case " $(id -Gn) " in
+    *" netdev "*) ok "in netdev" ;;
+    *)            warn "not in netdev" ;;
+esac
+[ -d /run/user-power ] \
+    && ok "/run/user-power exists -- reboot/poweroff/suspend work without root" \
+    || bad "/run/user-power missing -- kernel updates can never take effect"
+for u in user-reboot.path user-poweroff.path user-suspend.path; do
+    [ -f "/etc/systemd/system/$u" ] || bad "missing unit: $u"
+done
+grep -qw mem /sys/power/state 2>/dev/null \
+    && ok "kernel offers suspend-to-idle" \
+    || warn "no 'mem' in /sys/power/state -- suspend will not work"
+timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes \
+    && ok "clock synchronised" \
+    || bad "clock not synced -- TLS will fail everywhere at once"
+[ -f /etc/apt/apt.conf.d/20auto-upgrades ] \
+    && ok "unattended-upgrades enabled" \
+    || bad "unattended-upgrades not enabled"
+# -F, fixed strings: the pattern contains ${...} and would otherwise need
+# escaping that survives both dash and bash. A gate check that silently
+# mismatches its own pattern is worse than no check at all.
+# Note 50unattended-upgrades is a conffile and is NOT edited in place --
+# setup.sh writes 52unattended-upgrades-local to override it, so grep the
+# whole directory rather than any single file.
+grep -rqsF -e 'codename}-updates' -e 'trixie-updates' /etc/apt/apt.conf.d/ \
+    && ok "-updates covered by unattended-upgrades" \
+    || bad "-updates NOT covered -- ca-certificates and tzdata will go stale"
+grep -rqsF 'Remove-Unused-Kernel-Packages' /etc/apt/apt.conf.d/ \
+    && ok "old kernels autoremoved" \
+    || bad "kernels accumulate with no root left to clean them"
+grep -rqsF 'force-confold' /etc/apt/apt.conf.d/ \
+    && ok "conffile prompts answered automatically" \
+    || bad "a dpkg prompt will stall upgrades forever with nobody to answer"
+grep -rqsF 'AutocleanInterval' /etc/apt/apt.conf.d/ \
+    && ok "apt cache autocleaned" \
+    || bad "apt cache grows forever -- apt clean needs root you will not have"
+grep -rqs "^\[connectivity\]" /etc/NetworkManager/conf.d/ \
+    && ok "NM connectivity checking configured" \
+    || bad "NM never probes -- it will report 'full' behind a captive portal"
+
+head "the toolchain you cannot reinstall"
+for c in git tmux nvim vim claude gh yazi lsd rg fzf nmcli brightnessctl; do
+    command -v "$c" >/dev/null 2>&1 || bad "missing command: $c"
+done
+command -v tree-sitter >/dev/null 2>&1 \
+    && ok "tree-sitter CLI present" \
+    || bad "no tree-sitter CLI -- every :TSInstall fails silently"
+n=$(ls "$HOME/.local/share/nvim/site/parser/" 2>/dev/null | wc -l)
+[ "$n" -gt 0 ] \
+    && ok "$n treesitter parsers compiled" \
+    || bad "no treesitter parsers -- highlighting is regex fallback everywhere"
+command -v godot >/dev/null 2>&1 && {
+    godot --headless --version >/dev/null 2>&1 \
+        && ok "godot runs headless" || bad "godot present but will not start"
+}
+command -v gdformat >/dev/null 2>&1 \
+    && ok "gdformat present" \
+    || warn "no gdformat -- needs pipx, which is apt and so pre-gate only"
+command -v w3m >/dev/null 2>&1 || command -v lynx >/dev/null 2>&1 \
+    && ok "text browser present" \
+    || warn "no text browser -- captive portals with real forms will be hard"
+man git >/dev/null 2>&1 && ok "man pages render" || bad "man git does not render"
+
+head "cannot be decided from here"
+warn "connect to a NEVER-SEEN network (phone hotspot) as this user"
+warn "claude: /logout then log back in -- rehearse re-auth, do not assume it"
+warn "git push to a real repo over SSH"
+warn "reboot via /run/user-power actually reboots"
+warn "suspend resumes with console, tmux, clock and network intact"
+warn "GRUB superuser password set, passphrase written down"
+warn "BIOS supervisor password -- without it, F12 and a USB stick bypass GRUB"
+
+printf '\n'
+[ "$fails" -eq 0 ] \
+    && printf '\033[32mno failures.\033[0m the warn lines still need testing by hand.\n\n' \
+    || printf '\033[31m%s failure(s).\033[0m fix them while root still exists.\n\n' "$fails"
+exit "$fails"

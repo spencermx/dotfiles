@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+"""Find network printers and report how they are configured.
+
+Three questions, in order: is there a printer, can I reach it, and will it
+accept what I can produce. The last one is the one that actually decides
+whether you get paper, and it is the one a discovery tool alone never answers.
+
+    printers              discover, then interrogate everything found
+    printers scan [CIDR]  TCP sweep for 631/9100/515 when mDNS is silent
+    printers show HOST    full IPP attribute dump for one printer
+
+Standard library only. `pip` is refused by EXTERNALLY-MANAGED on this machine
+and after the gate there is no root to apt-install with, so this has to work
+with what the interpreter already has. `avahi-browse` and `ipptool` do parts of
+this better and are worth installing before the gate -- this exists because it
+keeps working when they were never installed.
+"""
+
+import concurrent.futures
+import socket
+import struct
+import sys
+import time
+import urllib.error
+import urllib.request
+
+MDNS_SERVICES = [
+    ("_ipp._tcp.local", "IPP", 631),
+    ("_ipps._tcp.local", "IPP/TLS", 631),
+    ("_pdl-datastream._tcp.local", "raw JetDirect", 9100),
+    ("_printer._tcp.local", "LPD", 515),
+]
+
+# What to ask a printer about itself. "all" would work but returns a wall of
+# text; these are the ones that change what you do next.
+WANTED = [
+    "printer-make-and-model", "printer-state", "printer-state-reasons",
+    "printer-is-accepting-jobs", "document-format-supported",
+    "uri-authentication-supported", "uri-security-supported",
+    "color-supported", "sides-supported", "media-default",
+    "queued-job-count", "printer-location", "printer-info",
+    "ipp-versions-supported", "media-supported",
+]
+
+PRINTER_STATE = {3: "idle", 4: "processing", 5: "stopped"}
+
+
+# --------------------------------------------------------------------------
+# mDNS: one multicast packet asking "who offers this service"
+# --------------------------------------------------------------------------
+
+def encode_name(name):
+    out = b""
+    for label in name.split("."):
+        out += bytes([len(label)]) + label.encode()
+    return out + b"\x00"
+
+
+def read_name(buf, off):
+    parts, jumped, end, hops = [], False, off, 0
+    while hops < 64:
+        hops += 1
+        if off >= len(buf):
+            break
+        n = buf[off]
+        if n == 0:
+            off += 1
+            if not jumped:
+                end = off
+            break
+        if n & 0xC0 == 0xC0:
+            if off + 2 > len(buf):
+                break
+            ptr = struct.unpack("!H", buf[off:off + 2])[0] & 0x3FFF
+            if not jumped:
+                end = off + 2
+            off, jumped = ptr, True
+            continue
+        parts.append(buf[off + 1:off + 1 + n].decode("utf-8", "replace"))
+        off += 1 + n
+        if not jumped:
+            end = off
+    return ".".join(parts), end
+
+
+def split_txt(rdata):
+    """A DNS TXT record is a sequence of length-prefixed strings, not one blob.
+
+    Treating it as one string is a real bug: the key=value pairs run together
+    and you misread the printer's capabilities.
+    """
+    out, i = [], 0
+    while i < len(rdata):
+        n = rdata[i]
+        if n == 0 or i + 1 + n > len(rdata):
+            break
+        out.append(rdata[i + 1:i + 1 + n].decode("utf-8", "replace"))
+        i += 1 + n
+    return out
+
+
+def mdns_discover(seconds=5):
+    """Return {ip: {"names": set, "port": int, "txt": {}, "host": str}}."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    s.settimeout(1.0)
+    try:
+        s.bind(("", 5353))
+    except OSError:
+        s.bind(("", 0))     # something already holds 5353; unicast replies only
+
+    for svc, _label, _port in MDNS_SERVICES:
+        hdr = struct.pack("!HHHHHH", 0, 0, 1, 0, 0, 0)
+        s.sendto(hdr + encode_name(svc) + struct.pack("!HH", 12, 1),
+                 ("224.0.0.251", 5353))
+
+    found = {}
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        try:
+            data, addr = s.recvfrom(9000)
+        except socket.timeout:
+            continue
+        except OSError:
+            break
+        entry = found.setdefault(addr[0], {"names": set(), "port": None,
+                                           "txt": {}, "host": ""})
+        try:
+            qd, an, ns, ar = struct.unpack("!HHHH", data[4:12])
+            off = 12
+            for _ in range(qd):
+                _, off = read_name(data, off)
+                off += 4
+            for _ in range(an + ns + ar):
+                name, off = read_name(data, off)
+                if off + 10 > len(data):
+                    break
+                rtype, _c, _t, rdlen = struct.unpack("!HHIH", data[off:off + 10])
+                off += 10
+                rdata = data[off:off + rdlen]
+                if rtype == 12:
+                    target, _ = read_name(data, off)
+                    entry["names"].add(target)
+                elif rtype == 33 and rdlen >= 6:
+                    _, _, port = struct.unpack("!HHH", rdata[:6])
+                    host, _ = read_name(data, off + 6)
+                    entry["port"] = port
+                    entry["host"] = host
+                elif rtype == 16:
+                    for pair in split_txt(rdata):
+                        if "=" in pair:
+                            k, v = pair.split("=", 1)
+                            entry["txt"][k] = v
+                off += rdlen
+        except Exception:
+            continue
+    return {ip: e for ip, e in found.items() if e["names"] or e["txt"]}
+
+
+# --------------------------------------------------------------------------
+# IPP: a binary protocol carried over an ordinary HTTP POST
+# --------------------------------------------------------------------------
+
+def ipp_attr(tag, name, value):
+    n = name.encode()
+    v = value.encode()
+    return bytes([tag]) + struct.pack("!H", len(n)) + n + struct.pack("!H", len(v)) + v
+
+
+def ipp_get_attributes(host, port=631, path="/ipp/print", timeout=6):
+    """Send Get-Printer-Attributes and decode the reply."""
+    uri = f"ipp://{host}:{port}{path}"
+    body = struct.pack("!BBHI", 2, 0, 0x000B, 1)     # IPP 2.0, op 0x0B, req id 1
+    body += b"\x01"                                   # operation-attributes-tag
+    body += ipp_attr(0x47, "attributes-charset", "utf-8")
+    body += ipp_attr(0x48, "attributes-natural-language", "en-us")
+    body += ipp_attr(0x45, "printer-uri", uri)
+    body += ipp_attr(0x44, "requested-attributes", WANTED[0])
+    for extra in WANTED[1:]:                          # same attr, more values
+        body += bytes([0x44]) + struct.pack("!H", 0) + \
+            struct.pack("!H", len(extra)) + extra.encode()
+    body += b"\x03"                                   # end-of-attributes-tag
+
+    req = urllib.request.Request(
+        f"http://{host}:{port}{path}", data=body,
+        headers={"Content-Type": "application/ipp"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return decode_ipp(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return {"_error": "401 -- printer requires authentication"}
+        return {"_error": f"HTTP {e.code}"}
+    except Exception as e:
+        return {"_error": str(e)}
+
+
+def decode_ipp(data):
+    """Walk the tag/name/value stream. Groups are delimited by tags < 0x10."""
+    if len(data) < 8:
+        return {"_error": "short reply"}
+    attrs = {}
+    off, current = 8, None
+    while off < len(data):
+        tag = data[off]
+        off += 1
+        if tag == 0x03:                    # end-of-attributes
+            break
+        if tag < 0x10:                     # group delimiter, not an attribute
+            continue
+        if off + 2 > len(data):
+            break
+        nlen = struct.unpack("!H", data[off:off + 2])[0]
+        off += 2
+        name = data[off:off + nlen].decode("utf-8", "replace")
+        off += nlen
+        vlen = struct.unpack("!H", data[off:off + 2])[0]
+        off += 2
+        raw = data[off:off + vlen]
+        off += vlen
+        if nlen == 0:
+            name = current                 # additional value of previous attr
+        else:
+            current = name
+        if name is None:
+            continue
+        attrs.setdefault(name, []).append(decode_value(tag, raw))
+    return attrs
+
+
+def decode_value(tag, raw):
+    if tag in (0x21, 0x23) and len(raw) == 4:      # integer, enum
+        return struct.unpack("!i", raw)[0]
+    if tag == 0x22 and len(raw) == 1:              # boolean
+        return bool(raw[0])
+    return raw.decode("utf-8", "replace")
+
+
+# --------------------------------------------------------------------------
+# TCP sweep, for when mDNS is blocked but the printer is still reachable
+# --------------------------------------------------------------------------
+
+def local_cidr():
+    """Guess the local /24 from the address used to reach the default route."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("192.0.2.1", 9))       # TEST-NET-1, no packet is sent
+        ip = s.getsockname()[0]
+    except Exception:
+        return None
+    finally:
+        s.close()
+    return ".".join(ip.split(".")[:3])
+
+
+def probe(ip, port, timeout=0.4):
+    s = socket.socket()
+    s.settimeout(timeout)
+    try:
+        return s.connect_ex((ip, port)) == 0
+    except Exception:
+        return False
+    finally:
+        s.close()
+
+
+def scan(prefix):
+    targets = [(f"{prefix}.{h}", p) for h in range(1, 255)
+               for p in (631, 9100, 515)]
+    hits = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=200) as ex:
+        futures = {ex.submit(probe, ip, p): (ip, p) for ip, p in targets}
+        for f in concurrent.futures.as_completed(futures):
+            ip, p = futures[f]
+            try:
+                if f.result():
+                    hits.setdefault(ip, []).append(p)
+            except Exception:
+                pass
+    return hits
+
+
+# --------------------------------------------------------------------------
+# Reporting
+# --------------------------------------------------------------------------
+
+def verdict(attrs):
+    """Translate IPP attributes into what you can actually do."""
+    lines = []
+    fmts = [str(f) for f in attrs.get("document-format-supported", [])]
+    if any("pdf" in f.lower() for f in fmts):
+        lines.append("  CAN PRINT: send a PDF directly, no driver needed")
+    elif any("postscript" in f.lower() for f in fmts):
+        lines.append("  CAN PRINT: PostScript only -- vim -c 'hardcopy > f.ps'")
+    elif any("text/plain" in f.lower() for f in fmts):
+        lines.append("  CAN PRINT: plain text only")
+    elif fmts:
+        lines.append(f"  formats are unusual: {', '.join(fmts[:4])}")
+
+    auth = [str(a) for a in attrs.get("uri-authentication-supported", [])]
+    if auth and not all(a == "none" for a in auth):
+        lines.append(f"  NEEDS AUTH: {', '.join(sorted(set(auth)))}")
+
+    accepting = attrs.get("printer-is-accepting-jobs", [None])[0]
+    if accepting is False:
+        lines.append("  NOT accepting jobs right now")
+
+    reasons = [str(r) for r in attrs.get("printer-state-reasons", [])
+               if str(r) != "none"]
+    if reasons:
+        lines.append(f"  attention: {', '.join(reasons)}")
+    return lines
+
+
+def report(host, port=631, path="/ipp/print", full=False):
+    attrs = ipp_get_attributes(host, port, path)
+    if "_error" in attrs:
+        print(f"  IPP query failed: {attrs['_error']}")
+        return
+
+    def one(key, default="?"):
+        v = attrs.get(key)
+        return v[0] if v else default
+
+    state = one("printer-state")
+    state = PRINTER_STATE.get(state, state)
+    print(f"  model     {one('printer-make-and-model')}")
+    print(f"  state     {state}    accepting jobs: "
+          f"{one('printer-is-accepting-jobs')}    queued: "
+          f"{one('queued-job-count')}")
+    loc = one("printer-location", "")
+    if loc:
+        print(f"  location  {loc}")
+    fmts = [str(f) for f in attrs.get("document-format-supported", [])]
+    if fmts:
+        print(f"  formats   {', '.join(fmts)}")
+    print(f"  colour    {one('color-supported')}    "
+          f"media: {one('media-default')}")
+
+    for line in verdict(attrs):
+        print(line)
+
+    if full:
+        print("\n  -- every attribute returned --")
+        for k in sorted(attrs):
+            vals = ", ".join(str(v) for v in attrs[k])
+            print(f"  {k:34} {vals[:100]}")
+
+
+def discover_and_report():
+    print("asking mDNS who offers printing (one multicast packet, 5s wait)\n")
+    found = mdns_discover()
+
+    if not found:
+        print("nothing advertised.\n")
+        print("that means one of three things, and they look identical here:")
+        print("  1. there is no printer on this network")
+        print("  2. mDNS is blocked but the printer is still reachable")
+        print("     -> try:  printers scan")
+        print("  3. client isolation: you cannot reach other devices at all,")
+        print("     which is normal on guest wifi and cannot be worked around")
+        return 1
+
+    for ip, e in sorted(found.items()):
+        name = sorted(e["names"])[0] if e["names"] else e["host"] or ip
+        print(f"=== {ip}  {name}")
+        if e["txt"]:
+            for k in ("ty", "note", "pdl", "rp", "adminurl"):
+                if k in e["txt"]:
+                    print(f"  {k:9} {e['txt'][k]}")
+        path = "/" + e["txt"].get("rp", "ipp/print")
+        report(ip, e["port"] or 631, path)
+        print()
+    return 0
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        return discover_and_report()
+
+    if args[0] == "scan":
+        prefix = args[1] if len(args) > 1 else local_cidr()
+        if not prefix:
+            print("could not work out the local network")
+            return 1
+        print(f"sweeping {prefix}.1-254 on ports 631, 9100, 515 ...")
+        print("(noisy, and pointless behind client isolation)\n")
+        hits = scan(prefix)
+        if not hits:
+            print("nothing listening. no reachable printers on this subnet.")
+            return 1
+        for ip, ports in sorted(hits.items()):
+            named = {631: "631 IPP", 9100: "9100 raw", 515: "515 LPD"}
+            print(f"=== {ip}   {', '.join(named[p] for p in sorted(ports))}")
+            if 631 in ports:
+                report(ip)
+            elif 9100 in ports:
+                print("  raw port only -- no way to query it, and no feedback.")
+                print(f"  print with:  nc {ip} 9100 < file.ps")
+            print()
+        return 0
+
+    if args[0] == "show":
+        if len(args) < 2:
+            print("usage: printers show HOST[:PORT] [PATH]")
+            return 1
+        host, _, p = args[1].partition(":")
+        port = int(p) if p else 631
+        path = args[2] if len(args) > 2 else "/ipp/print"
+        print(f"=== {host}:{port}{path}")
+        report(host, port, path, full=True)
+        return 0
+
+    print(__doc__)
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

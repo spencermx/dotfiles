@@ -469,6 +469,69 @@ needs, so the authorisation half is proven. The remaining test is a real
 association with a network the machine has never seen — a phone hotspot, at
 the gate.
 
+### Associating is not connecting: the captive portal
+
+Joining the network and reaching the internet are different problems, and the
+second one is the one a library actually presents. `nmcli` finishes its job at
+association; a portal then intercepts everything until a form is submitted.
+With no browser, that form has to be found and filled from the console.
+
+**NM's own portal detection was silently off, and this is pre-gate.** NM only
+probes if `[connectivity] uri` is set, and Debian's `network-manager` ships no
+connectivity conf at all. Unset, NM reports `full` whenever a default route
+exists — which is precisely the state behind a portal. Measured before the fix:
+`nmcli networking connectivity` answered `full` instantly with nothing logged.
+`setup.sh` now writes the `[connectivity]` block into `10-console.conf`, so the
+state becomes `portal` and there is something to trust.
+
+**How detection works, and the one detail that breaks it.** Request a URL whose
+correct answer is known — `http://connectivitycheck.gstatic.com/generate_204`
+returns an empty 204 — and anything else means interception. A 302's `Location`
+header *is* the portal URL; a 200 with the wrong body means a transparent proxy
+answered in the real server's place.
+
+The probe must be **HTTP, never HTTPS**. A portal cannot intercept TLS without
+producing a certificate error, so an HTTPS probe fails or hangs instead of
+revealing the redirect. Every probe URL in `debian/bin/portal` is http:// for
+this reason and must stay that way.
+
+**Submitting is not a blind POST.** Real portals set a session cookie on the
+redirect and carry hidden fields — a CSRF token, the client MAC, the AP MAC, a
+session id — and reject anything missing them. So the flow is: fetch the page,
+extract the `<form>` and *every* input including hidden ones, then post them
+back with the cookie jar intact, changing only the checkbox.
+
+`debian/bin/portal` does exactly that in three steps — `portal`,
+`portal inspect <url>`, `portal submit <url> name=value ...` — persisting
+cookies to `~/.cache/portal/` so the session survives between commands. It is
+standard library only, which is not a style choice: `pip` is refused by
+`EXTERNALLY-MANAGED` and there is no root to install a system package with, so
+`requests` and BeautifulSoup are permanently unavailable here. `urllib`,
+`http.cookiejar` and `html.parser` are the whole toolbox.
+
+Tested on 2026-08-11 against a local server that imitates a real portal —
+302-intercepted probe, session cookie, hidden CSRF token, checkbox. Detection
+found the URL, inspection listed all six fields, submission was rejected with
+403 without the checkbox and accepted with 200 with it, cookie loaded from disk
+across separate process invocations.
+
+**The honest limit: a JavaScript-driven portal cannot be done this way.** If the
+page builds its request in JS, neither this script nor a text browser can
+complete it, and no amount of scripting fixes that. `portal inspect` says so
+explicitly when it finds scripts and no form. The fallbacks are a phone
+hotspot, or authorising on another device and cloning its MAC with
+`nmcli connection modify <con> 802-11-wireless.cloned-mac-address <mac>` —
+note `/usr/lib/NetworkManager/conf.d/no-mac-addr-change.conf` is present, so
+the MAC is stable by default and a portal that authorises by MAC will remember
+this machine between visits.
+
+**A text browser is still the primary tool and is apt-only.** Most library
+portals are plain HTML forms, and `w3m` walks them interactively — tab to the
+checkbox, Enter — which is far more robust than scripting each one. The script
+is for detection, for seeing what a portal actually wants, and for repeatable
+re-login. Neither replaces the other, and only one of them can be installed
+after the gate.
+
 ## Godot — checked on 2026-08-11, and it works better than expected
 
 The premise that it must be settled before the gate was wrong, and the check
