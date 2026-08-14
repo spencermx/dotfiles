@@ -18,3 +18,7 @@
 
 [core]
 	editor = nvim
+[pull]
+	rebase = merges
+[rebase]
+	autoStash = true
