@@ -69,6 +69,11 @@ LINKS_COMMON=(
     "$HOME/.bashrc|$REPO_ROOT/config/.bashrc"
     "$HOME/.gitconfig|$REPO_ROOT/config/.gitconfig"
     "$HOME/.gitconfig.common|$SHARED_ROOT/config/.gitconfig"
+
+    # The `repo` command, shared with debian/. This zone's .bashrc sources it,
+    # so both links are required.
+    "$HOME/.bashrc.repo|$SHARED_ROOT/config/shell/repo.bash"
+
     "$HOME/.tmux.conf|$SHARED_ROOT/config/.tmux.conf"
     "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
 

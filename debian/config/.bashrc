@@ -151,6 +151,18 @@ ts() {
 	fi
 }
 
+# `repo` -- one word for every git repo below here: status, checkout-and-pull
+# across all of them, and PR review in a throwaway clone under ~/.prs. The
+# implementation is shared with archlinux/ and lives in common/, linked to
+# ~/.bashrc.repo, the same include pattern .tmux.conf and .gitconfig use.
+#
+# $REPO_OPEN is the one thing the two zones disagree about: what to launch on
+# the review clone once the PR is checked out. Arch opens VS Code; there is no
+# display server here, so it is the editor this machine actually has. Set it
+# empty to check out the PR and just leave you standing in the tree.
+REPO_OPEN=nvim
+[ -r "$HOME/.bashrc.repo" ] && . "$HOME/.bashrc.repo"
+
 #---------------------------------------------------------------------------
 # Keys and completions
 #---------------------------------------------------------------------------

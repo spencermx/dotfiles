@@ -13,6 +13,7 @@ A zone reads from its own directory and from `common/`, and writes only inside
 
 | `config/nvim/` | `config/.vimrc` | `config/.tmux.conf` |
 | `config/claude/` | `config/vscode/` | `config/git/ignore` |
+| `config/shell/repo.bash` — bash only, see below | | |
 | `config/.gitconfig` — the shared half only, see below | | |
 
 The test is "is this OS-specific", not "is this currently duplicated". A file
@@ -27,6 +28,17 @@ zone's own `.gitconfig` pulls it in with `[include]` before adding its
 credential helper. Note that `git config --global <key>` will not show included
 values — `--includes` defaults off when scoped to a file. Drop `--global` to
 check one.
+
+`config/shell/repo.bash` is the `repo` command, sourced by the `archlinux/` and
+`debian/` bashrcs from `~/.bashrc.repo`. It is shared because it is git, `gh`
+and bash builtins with nothing OS-specific in it — but only those two zones can
+read it, so `windows/config/Microsoft.PowerShell_profile.ps1` and
+`mac/config/.zshrc` still hold their own ports of the same command, and a change
+here does not reach them. The one thing the zones disagree about is what to open
+the review clone with; that is `$REPO_OPEN`, set by each zone's bashrc, so the
+shared file carries no conditional. It is *not* the shared half of a bashrc —
+the two bashrcs agree on much more than this and are still separate copies on
+purpose.
 
 Nothing else is shared, and one zone still must not point at another. That
 coupling existed and was removed deliberately: a mac edit silently changed the

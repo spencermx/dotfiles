@@ -192,6 +192,18 @@ ts() {
 }
 ## eval "$(zoxide init bash)"
 
+# `repo` -- one word for every git repo below here: status, checkout-and-pull
+# across all of them, and PR review in a throwaway clone under ~/.prs. The
+# implementation is shared with debian/ and lives in common/, linked to
+# ~/.bashrc.repo, the same include pattern .gitconfig uses.
+#
+# $REPO_OPEN is the one thing the two zones disagree about: what to launch on
+# the review clone once the PR is checked out. Debian is a text console and
+# opens nvim. It is checked with command -v before it runs, so this is inert
+# rather than fatal on a machine without VS Code installed.
+REPO_OPEN=code
+[ -r "$HOME/.bashrc.repo" ] && . "$HOME/.bashrc.repo"
+
 ################################################################# CUSTOM ##################################################################
 
 ##. "$HOME/.cargo/env"
