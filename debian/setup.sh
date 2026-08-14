@@ -121,6 +121,10 @@ LINKS=(
     "$HOME/.local/bin/diskreport|$REPO_ROOT/bin/diskreport"
     "$HOME/.local/bin/toolcheck|$REPO_ROOT/bin/toolcheck"
 
+    # Personal reference pages use the normal user-local man hierarchy, so
+    # `man notes-tmux` works without modifying MANPATH.
+    "$HOME/.local/share/man/man1/notes-tmux.1|$REPO_ROOT/man/man1/notes-tmux.1"
+
     "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.config/nvim|$SHARED_ROOT/config/nvim"
     "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
@@ -135,6 +139,7 @@ ENSURE_DIRS=(
     "$HOME/.config/git"
     "$HOME/.config/yazi"
     "$HOME/.local/share"
+    "$HOME/.local/share/man/man1"
     "$HOME/.local/bin"
     "$HOME/.claude"
     "$HOME/source/repos"

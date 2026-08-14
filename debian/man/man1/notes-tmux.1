@@ -1,0 +1,86 @@
+.TH NOTES-TMUX 1 "August 2026" "Personal Notes" "TMUX Debian Cheatsheet"
+.SH NAME
+notes-tmux \- quick reference for the Debian tmux setup
+.SH PREFIX
+.nf
+Ctrl-a                       Press Ctrl-a, release, then press command key
+.fi
+.SH OUTSIDE TMUX
+.nf
+tmux                         Start tmux
+tmux new -s NAME             Start a named session
+tmux ls                      List sessions
+tmux a                       Attach to the most recent session
+tmux a -t NAME               Attach to a named session
+tmux kill-session -t NAME    Kill one named session
+tmux kill-server             Kill every session and stop tmux
+.fi
+.SH SESSIONS
+.nf
+Ctrl-a o                     Open session chooser / switch sessions
+Ctrl-a : new-session -s NAME Create and enter a new named session
+Ctrl-a d                     Detach and leave tmux running
+Ctrl-a $                     Rename current session
+.fi
+.SH WINDOWS
+.nf
+Alt-c                        Create new window
+Ctrl-a c                     Create new window
+Alt-;                        Previous window
+Alt-'                        Next window
+Alt-1 through Alt-9          Jump to window 1 through 9
+Alt-0                        Jump to window 10
+Alt-Shift-;                  Move current window left
+Alt-Shift-'                  Move current window right
+Ctrl-a ,                     Rename current window
+Ctrl-a &                     Kill current window
+.fi
+.SH PANES
+.nf
+Ctrl-a v                     Split left/right (vertical divider)
+Ctrl-a s                     Split top/bottom (horizontal divider)
+Alt-x                        Kill current pane
+Ctrl-a x                     Kill current pane
+Ctrl-a q                     Show pane numbers
+Ctrl-a a                     Return to previous pane
+Ctrl-h                       Move to left pane
+Ctrl-j                       Move to pane below
+Ctrl-k                       Move to pane above
+Ctrl-l                       Move to right pane
+Shift-Arrow                  Resize pane in arrow direction
+Alt-h/j/k/l                  Resize pane left/down/up/right
+.fi
+.SH SCROLL, COPY, AND PASTE
+.nf
+Ctrl-a [                     Enter copy/scroll mode
+h/j/k/l or Arrow keys        Move in copy mode
+v                            Begin selection in copy mode
+y                            Copy selection to tmux buffer
+Ctrl-a ]                     Paste newest buffer
+Ctrl-a B                     Choose an older buffer
+Alt-v                        Paste newest buffer directly
+.fi
+.SH OTHER
+.nf
+Ctrl-a R                     Reload tmux configuration
+Ctrl-a :                     Open tmux command prompt
+Ctrl-a Ctrl-a                Send Ctrl-a to the running program
+Ctrl-a ?                     Show all tmux key bindings
+.fi
+.SH QUICK WORKFLOW
+.nf
+tmux new -s work             Start the work session
+Ctrl-a o                     Switch sessions
+Alt-c                        Create a window
+Alt-number                   Switch windows
+Ctrl-a v                     Split left/right
+Ctrl-a s                     Split top/bottom
+Ctrl-h/j/k/l                 Switch panes
+Alt-x                        Close current pane
+Ctrl-a d                     Detach and leave it running
+tmux a -t work               Return to the work session
+.fi
+.SH FILES
+.nf
+debian/man/man1/notes-tmux.1 Man-page source in the dotfiles repository
+.fi
