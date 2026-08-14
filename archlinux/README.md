@@ -82,6 +82,7 @@ and `/usr/sbin`. Those are personal documents and now live in the private
 | | |
 |-|-|
 | `.bashrc` `.gitconfig` `.tmux.conf` | shell and tooling |
+| `.bashrc` → `~/.bashrc.repo` | sources `common/config/shell/repo.bash`, the `repo` command, shared with `debian/`. `$REPO_OPEN` is set here and is the only per-zone part |
 | `.vimrc` `nvim/` | editor — from `common/config/`, shared with every zone |
 | `nvim/` | 33 files — the same editor config the mac uses, as its own copy |
 | `hypr/` `hypr-asus/` | hyprland, per machine. `hypr/` also has `hyprpaper.conf` |

@@ -54,3 +54,11 @@ desktop.
 clipboard to integrate with. `nvim` and `.vimrc` come from `common/config/`,
 the same files the arch and mac zones use. A change to a `debian/` file reaches
 nothing else; a change under `common/` reaches every zone.
+
+`config/.bashrc` is this zone's own copy, but it sources one shared file:
+`common/config/shell/repo.bash`, linked to `~/.bashrc.repo`, which is the
+`repo` command. See `repo --help`. It is shared with `archlinux/` because
+nothing in it is OS-specific; the one thing that is — what to open a reviewed
+PR with, `code` there and `nvim` here — is `$REPO_OPEN`, set in `.bashrc`
+before the source line. Everything else the two bashrcs have in common is still
+deliberately duplicated.

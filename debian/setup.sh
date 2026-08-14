@@ -101,6 +101,10 @@ LINKS=(
     "$HOME/.gitconfig|$REPO_ROOT/config/.gitconfig"
     "$HOME/.gitconfig.common|$SHARED_ROOT/config/.gitconfig"
 
+    # The `repo` command, shared with archlinux/. This zone's .bashrc sources
+    # it, so both links are required -- the same shape as the tmux pair below.
+    "$HOME/.bashrc.repo|$SHARED_ROOT/config/shell/repo.bash"
+
     # This zone's own tmux config -- no clipboard exists here. It source-files
     # the shared one, so both links are required.
     "$HOME/.tmux.conf|$REPO_ROOT/config/.tmux.conf"
