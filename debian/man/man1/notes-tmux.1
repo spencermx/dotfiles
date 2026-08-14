@@ -18,7 +18,7 @@ tmux kill-server             Kill every session and stop tmux
 .SH SESSIONS
 .nf
 Ctrl-a o                     Open session chooser / switch sessions
-Ctrl-a : new-session -s NAME Create and enter a new named session
+Ctrl-a : new -s NAME         Create and enter a new named session
 Ctrl-a d                     Detach and leave tmux running
 Ctrl-a $                     Rename current session
 .fi
@@ -62,6 +62,8 @@ Alt-v                        Paste newest buffer directly
 .fi
 .SH OTHER
 .nf
+Ctrl-a Ctrl-s                Save sessions, windows, panes, and directories
+Ctrl-a Ctrl-r                Restore the most recently saved tmux state
 Ctrl-a R                     Reload tmux configuration
 Ctrl-a :                     Open tmux command prompt
 Ctrl-a Ctrl-a                Send Ctrl-a to the running program
