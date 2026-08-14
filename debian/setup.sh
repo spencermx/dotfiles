@@ -811,6 +811,48 @@ install_godot() {
     rm -rf "$tmp"
 }
 
+# TPM is the one plugin bootstrap tmux cannot perform for itself: the config
+# can declare TPM and resurrect, but the `run` line points at a file that does
+# not exist on a fresh account. Once TPM is present, let its own installer read
+# every @plugin declaration from the real config instead of maintaining a
+# second plugin list here.
+install_tmux_plugins() {
+    local plugin_root="$HOME/.tmux/plugins"
+    local tpm="$plugin_root/tpm"
+    local setup_socket="dotfiles-tpm-$$"
+
+    mkdir -p "$plugin_root" || return 1
+
+    if [ -x "$tpm/tpm" ]; then
+        skipped "TPM present ($tpm)"
+    else
+        added "installing TPM"
+        git clone https://github.com/tmux-plugins/tpm "$tpm" || return 1
+        added "TPM -> $tpm"
+    fi
+
+    # install_plugins reads @plugin values from a tmux server. Use a private,
+    # short-lived server so setup works both inside and outside tmux and never
+    # changes or kills the user's real sessions.
+    tmux -L "$setup_socket" -f "$HOME/.tmux.conf" new-session -d -s plugin-setup \
+        || return 1
+    if ! tmux -L "$setup_socket" run-shell "$tpm/bin/install_plugins"; then
+        tmux -L "$setup_socket" kill-server 2>/dev/null
+        return 1
+    fi
+    tmux -L "$setup_socket" kill-server 2>/dev/null
+
+    [ -x "$tpm/tpm" ] || return 1
+    [ -f "$plugin_root/tmux-resurrect/resurrect.tmux" ] || return 1
+
+    # A running server loaded the config before the plugins existed. Reload it
+    # so manual save/restore works now; no server is a normal setup condition.
+    if tmux list-sessions >/dev/null 2>&1; then
+        tmux source-file "$HOME/.tmux.conf" || return 1
+        added "reloaded the active tmux server"
+    fi
+}
+
 phase_tools() {
     step "Tools"
 
@@ -821,6 +863,15 @@ phase_tools() {
     fi
 
     mkdir -p "$HOME/.local/bin"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? install TPM and declared tmux plugins%s\n' "$C_SKIP" "$C_OFF"
+    elif install_tmux_plugins; then
+        skipped "tmux-resurrect present ($HOME/.tmux/plugins/tmux-resurrect)"
+    else
+        problem "tmux plugin install failed"
+        fail_phase tools
+    fi
 
     local t
     for t in "${TOOLS[@]}"; do
@@ -973,6 +1024,13 @@ EOF
     for c in "${EXPECTED_COMMANDS[@]}"; do
         command -v "$c" >/dev/null 2>&1 || problem "command not found: $c"
     done
+
+    if [ -x "$HOME/.tmux/plugins/tpm/tpm" ] && \
+       [ -f "$HOME/.tmux/plugins/tmux-resurrect/resurrect.tmux" ]; then
+        skipped "TPM and tmux-resurrect installed"
+    else
+        problem "TPM or tmux-resurrect missing -- run ./setup.sh --phase tools"
+    fi
 
     local nvim_check
     if ! command -v nvim >/dev/null 2>&1; then
