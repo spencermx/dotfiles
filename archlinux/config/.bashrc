@@ -127,6 +127,7 @@ export XDG_MENU_PREFIX=plasma-
 #alias ls="lsd"
 # alias fe="nautilus . & disown"
 alias fe="dolphin . & disown"
+alias cls='clear'
 alias ct='RUSTFLAGS="-Awarnings" cargo test --lib -- --format pretty'
 alias treenod="tree -I 'node_modules'"
 alias ytd='yt-dlp -x --audio-format mp3'
