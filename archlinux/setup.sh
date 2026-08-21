@@ -10,7 +10,6 @@
 #   ./setup.sh --phase packages,links      packages then links
 #   ./setup.sh --phase packages,services   packages then services
 #   ./setup.sh --phase links,services      links then services
-#   ./setup.sh --machine asus     laptop config instead of desktop (auto-detected)
 #
 # packages/services need your sudo password -- run from a real terminal.
 # links needs no sudo. Safe to re-run; only touches what isn't already correct.
@@ -25,7 +24,6 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configs byte-identical across zones live in common/ instead of being kept in
 # sync by hand. This is the only path that reaches outside the zone, so this
 # zone no longer provisions a machine alone -- it needs common/ beside it.
-# Unrelated to LINKS_COMMON below, which means "common to every arch machine".
 SHARED_ROOT="$(dirname "$REPO_ROOT")/common"
 
 #---------------------------------------------------------------------------
@@ -53,7 +51,7 @@ PACKAGES=(
 USER_SERVICES=(pipewire.service pipewire-pulse.service wireplumber.service)
 SYSTEM_SERVICES=(bluetooth.service)
 
-# Links common to both machines, as "link location|file in this repo".
+# The link table, as "link location|file in this repo".
 #
 # The old install2.sh pointed BASE_SOURCE at
 # $HOME/source/repos-spencermx/archlinux/config -- a path that did not exist, in a
@@ -64,7 +62,7 @@ SYSTEM_SERVICES=(bluetooth.service)
 # It also linked workspace/, ultimate/ and gitrip.sh out of the repo. Those are
 # personal documents and now live in the private `personal` repo, so they are
 # deliberately absent.
-LINKS_COMMON=(
+LINKS=(
     "$HOME/.vimrc|$SHARED_ROOT/config/.vimrc"
     "$HOME/.bashrc|$REPO_ROOT/config/.bashrc"
     "$HOME/.gitconfig|$REPO_ROOT/config/.gitconfig"
@@ -92,6 +90,13 @@ LINKS_COMMON=(
 
     "$HOME/.config/kdeglobals|$REPO_ROOT/config/kdeglobals"
     "$HOME/.config/waybar|$REPO_ROOT/config/waybar"
+    "$HOME/.config/hypr|$REPO_ROOT/config/hypr"
+
+    # Terminal colour schemes, one file each. The alacritty config imports a
+    # theme from here by name.
+    "$HOME/.config/alacritty-themes|$REPO_ROOT/config/alacritty-themes"
+    "$HOME/.local/bin/alacritty-theme|$REPO_ROOT/config/bin/alacritty-theme"
+    "$HOME/.config/alacritty|$REPO_ROOT/config/alacritty"
 )
 
 ENSURE_DIRS=(
@@ -119,7 +124,6 @@ skip()   { printf '%s   . %s%s\n' "$C_SKIP" "$*" "$C_OFF"; }
 warn()   { printf '%s   ! %s%s\n' "$C_WARN" "$*" "$C_OFF"; }
 
 DRY_RUN=0
-MACHINE=""
 PHASES="packages links services"
 FAILED_PHASES=""
 PROBLEM_COUNT=0
@@ -160,17 +164,6 @@ detect_ucode() {
     fi
 }
 
-# The ASUS laptop is the 4k machine. Detected from the DMI product name, which
-# is readable without root on any modern kernel.
-detect_machine() {
-    local vendor=""
-    [ -r /sys/class/dmi/id/sys_vendor ] && vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)"
-    case "$vendor" in
-        *[Aa][Ss][Uu][Ss]*) printf 'asus' ;;
-        *) printf 'desktop' ;;
-    esac
-}
-
 #---------------------------------------------------------------------------
 # Argument parsing
 #---------------------------------------------------------------------------
@@ -180,11 +173,6 @@ parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
             --dry-run|-n) DRY_RUN=1 ;;
-            --machine|-m)
-                shift
-                [ $# -gt 0 ] || { echo "--machine needs a value" >&2; exit 2; }
-                MACHINE="$1"
-                ;;
             --phase|-p)
                 shift
                 [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 2; }
@@ -192,7 +180,7 @@ parse_args() {
                 PHASES="$PHASES $(printf '%s' "$1" | tr ',' ' ')"
                 ;;
             --help|-h)
-                sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^#\{1,2\} \{0,1\}//'
+                sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^#\{1,2\} \{0,1\}//'
                 exit 0
                 ;;
             *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -206,26 +194,6 @@ parse_args() {
             *) echo "unknown phase: $p (packages links services)" >&2; exit 2 ;;
         esac
     done
-
-    [ -n "$MACHINE" ] || MACHINE="$(detect_machine)"
-    case "$MACHINE" in
-        desktop|asus) ;;
-        *) echo "unknown machine: $MACHINE (desktop asus)" >&2; exit 2 ;;
-    esac
-}
-
-# The per-machine half of the link table, appended to LINKS_COMMON.
-machine_links() {
-    case "$MACHINE" in
-        asus)
-            echo "$HOME/.config/hypr|$REPO_ROOT/config/hypr-asus"
-            echo "$HOME/.config/alacritty|$REPO_ROOT/config/alacritty-4k"
-            ;;
-        *)
-            echo "$HOME/.config/hypr|$REPO_ROOT/config/hypr"
-            echo "$HOME/.config/alacritty|$REPO_ROOT/config/alacritty"
-            ;;
-    esac
 }
 
 #---------------------------------------------------------------------------
@@ -233,7 +201,7 @@ machine_links() {
 #---------------------------------------------------------------------------
 
 phase_packages() {
-    step "Packages ($MACHINE)"
+    step 'Packages'
 
     if ! has pacman; then
         warn 'pacman not found -- this is not an Arch system. Skipping.'
@@ -326,7 +294,7 @@ link_one() {
 }
 
 phase_links() {
-    step "Links ($MACHINE)"
+    step 'Links'
 
     local d entry
     for d in "${ENSURE_DIRS[@]}"; do
@@ -335,18 +303,10 @@ phase_links() {
         mkdir -p "$d" && change "created $(tilde "$d")"
     done
 
-    for entry in "${LINKS_COMMON[@]}"; do
+    for entry in "${LINKS[@]}"; do
         split_pair "$entry"
         link_one "$PAIR_L" "$PAIR_R"
     done
-
-    while IFS= read -r entry; do
-        [ -n "$entry" ] || continue
-        split_pair "$entry"
-        link_one "$PAIR_L" "$PAIR_R"
-    done <<EOF
-$(machine_links)
-EOF
 }
 
 #---------------------------------------------------------------------------
@@ -418,11 +378,7 @@ verify() {
     step 'Health check'
 
     local entry link target short c
-    # Read line by line rather than `for entry in ... $(machine_links)`. That
-    # form word-splits, so a link path containing a space would be checked as
-    # two broken half-paths. phase_links already reads it this way.
-    while IFS= read -r entry; do
-        [ -n "$entry" ] || continue
+    for entry in "${LINKS[@]}"; do
         split_pair "$entry"
         link="$PAIR_L"; target="$PAIR_R"
         short="$(tilde "$link")"
@@ -439,10 +395,7 @@ verify() {
         else
             problem; warn "missing            $short"
         fi
-    done <<EOF
-$(printf '%s\n' "${LINKS_COMMON[@]}")
-$(machine_links)
-EOF
+    done
 
     if has pacman; then
         local missing="" mcount=0 p
@@ -478,7 +431,7 @@ main() {
         exit 2
     fi
 
-    printf '%sarchlinux setup - %s  (machine: %s)%s\n' "$C_STEP" "$REPO_ROOT" "$MACHINE" "$C_OFF"
+    printf '%sarchlinux setup - %s%s\n' "$C_STEP" "$REPO_ROOT" "$C_OFF"
     [ "$DRY_RUN" -eq 1 ] && printf '%sDRY RUN - nothing will be changed%s\n' "$C_WARN" "$C_OFF"
 
     wants_phase packages && phase_packages
