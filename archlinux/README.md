@@ -19,7 +19,6 @@ notes/      reference — the manual steps that come before setup.sh
 ./setup.sh --dry-run              # show what would change, touch nothing
 ./setup.sh                        # do it
 ./setup.sh --phase links          # one phase
-./setup.sh --machine asus         # override machine detection
 ```
 
 It refuses to run anywhere `uname` isn't `Linux`.
@@ -27,24 +26,12 @@ It refuses to run anywhere `uname` isn't `Linux`.
 | phase | |
 |-------|--|
 | `packages` | `pacman -S --needed` every package in `$PACKAGES`, plus the right microcode |
-| `links` | symlinks `config/` into place — the common set plus the per-machine pair |
+| `links` | symlinks `config/` into place |
 | `services` | enables the PipeWire user services and Bluetooth, and points `vim` at nvim |
 
 A health check runs at the end regardless of which phases you picked: every
 link is a real symlink with a live target, every declared package is installed,
 every command in `$EXPECTED_COMMANDS` resolves.
-
-## Two machines
-
-The desktop and the ASUS laptop share this directory and differ in exactly two
-configs. `$MACHINE` selects between them, detected from `/sys/class/dmi/id/sys_vendor`:
-
-| | desktop | asus |
-|-|---------|------|
-| hyprland | `config/hypr` | `config/hypr-asus` |
-| alacritty | `config/alacritty` (font 10.666666) | `config/alacritty-4k` (font 11) |
-
-Everything else is identical. Pass `--machine` if detection gets it wrong.
 
 ## What replaced the install scripts
 
@@ -55,7 +42,8 @@ There were seven: `install1.sh` through `install5.sh`, plus `_4k`, `_amd` and
   by one word** — `amd-ucode` vs `intel-ucode`. That is now detected from
   `/proc/cpuinfo`, so there is one package list instead of two drifting copies.
 - **`install2.sh` and `install2_4k.sh`** were the same link script forked per
-  machine. That fork is now the `$MACHINE` variable.
+  machine. That fork became the `$MACHINE` variable, retired in turn with the
+  ASUS laptop it selected — there is one machine and one link table now.
 - **`install1.sh` contained no executable code** — 36 lines, all comments. It
   is now `notes/arch-install.md`, which is what it always was.
 - **`install5.sh` was three lines**, folded into the `services` phase.
@@ -85,8 +73,8 @@ and `/usr/sbin`. Those are personal documents and now live in the private
 | `.bashrc` → `~/.bashrc.repo` | sources `common/config/shell/repo.bash`, the `repo` command, shared with `debian/`. `$REPO_OPEN` is set here and is the only per-zone part |
 | `.vimrc` `nvim/` | editor — from `common/config/`, shared with every zone |
 | `nvim/` | 33 files — the same editor config the mac uses, as its own copy |
-| `hypr/` `hypr-asus/` | hyprland, per machine. `hypr/` also has `hyprpaper.conf` |
-| `alacritty/` `alacritty-4k/` | terminal, per machine |
+| `hypr/` | hyprland. Also has `hyprpaper.conf` |
+| `alacritty/` | terminal |
 | `waybar/` | the status bar both hyprland configs actually launch |
 | `mechabar/` | **vendored third-party** waybar theme, 57 files, ships its own `install.sh`. Don't hand-edit it; update from upstream |
 | `i3/` | X11 fallback WM |
@@ -111,9 +99,3 @@ top of the script.
 `Xenlism-Arch/` is a vendored GRUB theme. It stays in the repo deliberately:
 the moment you need a boot theme is while restoring a broken machine, which is
 exactly when you may not have a desktop or a network to fetch it with.
-
-## Untested since the rewrite
-
-`setup.sh` was written on macOS and its syntax, argument handling and machine
-selection were verified there. **The pacman, systemctl and symlink paths have
-not been run on an actual Arch box.** Run `--dry-run` first.

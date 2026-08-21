@@ -94,8 +94,8 @@ editor.
 
 Each directory has its own README covering the parts that do not generalise:
 
-- [archlinux/README.md](archlinux/README.md) — two machines share it (desktop and an
-  ASUS laptop), selected by DMI detection
+- [archlinux/README.md](archlinux/README.md) — how seven install scripts became
+  one `setup.sh`, and the health check that keeps it honest
 - [debian/README.md](debian/README.md) — a console-only ThinkPad with no X or
   Wayland, and the ordered gate that ends in `sudo` being purged
 - [mac/README.md](mac/README.md) — Karabiner and AeroSpace are one keymap split
