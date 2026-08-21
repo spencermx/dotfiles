@@ -1,0 +1,27 @@
+# Monokai -- High-chroma on olive-black.
+# Body text 13.9:1, dimmest accent 3.9:1 (red).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#272822"
+foreground = "#f8f8f2"
+
+[colors.normal]
+black   = "#272822"  # 1.0:1
+red     = "#f92672"  # 3.9:1
+green   = "#a6e22e"  # 9.6:1
+yellow  = "#f4bf75"  # 8.9:1
+blue    = "#66d9ef"  # 9.0:1
+magenta = "#ae81ff"  # 5.2:1
+cyan    = "#a1efe4"  # 11.3:1
+white   = "#f8f8f2"  # 13.9:1
+
+[colors.bright]
+black   = "#75715e"  # 3.0:1
+red     = "#f92672"  # 3.9:1
+green   = "#a6e22e"  # 9.6:1
+yellow  = "#f4bf75"  # 8.9:1
+blue    = "#66d9ef"  # 9.0:1
+magenta = "#ae81ff"  # 5.2:1
+cyan    = "#a1efe4"  # 11.3:1
+white   = "#f9f8f5"  # 14.0:1

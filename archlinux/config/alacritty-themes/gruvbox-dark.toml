@@ -1,0 +1,27 @@
+# Gruvbox Dark -- Warm, heavy, high contrast.
+# Body text 10.7:1, dimmest accent 2.7:1 (red).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#282828"
+foreground = "#ebdbb2"
+
+[colors.normal]
+black   = "#282828"  # 1.0:1
+red     = "#cc241d"  # 2.7:1
+green   = "#98971a"  # 4.8:1
+yellow  = "#d79921"  # 5.9:1
+blue    = "#458588"  # 3.5:1
+magenta = "#b16286"  # 3.5:1
+cyan    = "#689d6a"  # 4.6:1
+white   = "#a89984"  # 5.3:1
+
+[colors.bright]
+black   = "#928374"  # 4.0:1
+red     = "#fb4934"  # 4.3:1
+green   = "#b8bb26"  # 7.1:1
+yellow  = "#fabd2f"  # 8.7:1
+blue    = "#83a598"  # 5.5:1
+magenta = "#d3869b"  # 5.4:1
+cyan    = "#8ec07c"  # 7.0:1
+white   = "#ebdbb2"  # 10.7:1

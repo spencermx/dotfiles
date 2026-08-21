@@ -1,0 +1,27 @@
+# Dracula -- Vivid, saturated accents.
+# Body text 13.4:1, dimmest accent 4.5:1 (red).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#282a36"
+foreground = "#f8f8f2"
+
+[colors.normal]
+black   = "#21222c"  # 1.1:1
+red     = "#ff5555"  # 4.5:1
+green   = "#50fa7b"  # 10.4:1
+yellow  = "#f1fa8c"  # 12.7:1
+blue    = "#bd93f9"  # 5.9:1
+magenta = "#ff79c6"  # 6.0:1
+cyan    = "#8be9fd"  # 10.3:1
+white   = "#f8f8f2"  # 13.4:1
+
+[colors.bright]
+black   = "#6272a4"  # 3.0:1
+red     = "#ff6e6e"  # 5.2:1
+green   = "#69ff94"  # 11.1:1
+yellow  = "#ffffa5"  # 13.6:1
+blue    = "#d6acff"  # 7.6:1
+magenta = "#ff92df"  # 7.1:1
+cyan    = "#a4ffff"  # 12.4:1
+white   = "#ffffff"  # 14.2:1

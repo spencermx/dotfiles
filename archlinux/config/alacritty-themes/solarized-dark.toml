@@ -1,0 +1,27 @@
+# Solarized Dark -- What you had before the red.
+# Body text 4.7:1, dimmest accent 3.2:1 (red).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#002b36"
+foreground = "#839496"
+
+[colors.normal]
+black   = "#073642"  # 1.2:1
+red     = "#dc322f"  # 3.2:1
+green   = "#859900"  # 4.7:1
+yellow  = "#b58900"  # 4.7:1
+blue    = "#268bd2"  # 4.1:1
+magenta = "#d33682"  # 3.3:1
+cyan    = "#2aa198"  # 4.8:1
+white   = "#eee8d5"  # 12.3:1
+
+[colors.bright]
+black   = "#002b36"  # 1.0:1
+red     = "#cb4b16"  # 3.3:1
+green   = "#586e75"  # 2.8:1
+yellow  = "#657b83"  # 3.4:1
+blue    = "#839496"  # 4.7:1
+magenta = "#6c71c4"  # 3.4:1
+cyan    = "#93a1a1"  # 5.6:1
+white   = "#fdf6e3"  # 13.9:1

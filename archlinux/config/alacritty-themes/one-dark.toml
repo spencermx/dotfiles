@@ -1,0 +1,27 @@
+# One Dark -- Neutral mid-grey ground.
+# Body text 6.6:1, dimmest accent 4.4:1 (red).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#282c34"
+foreground = "#abb2bf"
+
+[colors.normal]
+black   = "#282c34"  # 1.0:1
+red     = "#e06c75"  # 4.4:1
+green   = "#98c379"  # 6.9:1
+yellow  = "#e5c07b"  # 8.1:1
+blue    = "#61afef"  # 5.9:1
+magenta = "#c678dd"  # 4.8:1
+cyan    = "#56b6c2"  # 5.9:1
+white   = "#abb2bf"  # 6.6:1
+
+[colors.bright]
+black   = "#5c6370"  # 2.3:1
+red     = "#e88b93"  # 5.7:1
+green   = "#a8d68a"  # 8.4:1
+yellow  = "#ecc98f"  # 8.9:1
+blue    = "#7cc0f5"  # 7.1:1
+magenta = "#d290e6"  # 5.9:1
+cyan    = "#6fc8d1"  # 7.2:1
+white   = "#ffffff"  # 14.0:1

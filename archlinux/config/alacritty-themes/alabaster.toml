@@ -1,0 +1,27 @@
+# Alabaster -- Minimal, very few hues.
+# Body text 19.6:1, dimmest accent 3.9:1 (green).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#f7f7f7"
+foreground = "#000000"
+
+[colors.normal]
+black   = "#000000"  # 19.6:1
+red     = "#aa3731"  # 5.9:1
+green   = "#448c27"  # 3.9:1
+yellow  = "#a86400"  # 4.4:1
+blue    = "#325cc0"  # 5.7:1
+magenta = "#7a3e9d"  # 6.5:1
+cyan    = "#0083b2"  # 4.0:1
+white   = "#8c8c8c"  # 3.1:1
+
+[colors.bright]
+black   = "#777777"  # 4.2:1
+red     = "#c14139"  # 4.8:1
+green   = "#4f9c31"  # 3.2:1
+yellow  = "#c07a00"  # 3.3:1
+blue    = "#3f6ed0"  # 4.5:1
+magenta = "#8d4bb0"  # 5.2:1
+cyan    = "#0f93bd"  # 3.3:1
+white   = "#3c3c3c"  # 10.3:1

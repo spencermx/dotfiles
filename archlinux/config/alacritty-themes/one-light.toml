@@ -1,0 +1,27 @@
+# One Light -- Neutral near-white.
+# Body text 10.9:1, dimmest accent 4.7:1 (green).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#fafafa"
+foreground = "#383a42"
+
+[colors.normal]
+black   = "#383a42"  # 10.9:1
+red     = "#c93c34"  # 4.8:1
+green   = "#3f7f3e"  # 4.7:1
+yellow  = "#9a6700"  # 4.7:1
+blue    = "#0165a8"  # 5.9:1
+magenta = "#8b1f8c"  # 7.5:1
+cyan    = "#07788a"  # 5.0:1
+white   = "#8b8d94"  # 3.2:1
+
+[colors.bright]
+black   = "#4f525d"  # 7.5:1
+red     = "#d8564a"  # 3.8:1
+green   = "#429e42"  # 3.2:1
+yellow  = "#a97a01"  # 3.7:1
+blue    = "#0171a3"  # 5.2:1
+magenta = "#8f2190"  # 7.2:1
+cyan    = "#08849c"  # 4.2:1
+white   = "#696c77"  # 5.0:1

@@ -1,0 +1,27 @@
+# Nord Legible -- Stock Nord where it passes; red, magenta and black lifted, brights separated.
+# Body text 9.2:1, dimmest accent 4.6:1 (magenta).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#2e3440"
+foreground = "#d8dee9"
+
+[colors.normal]
+black   = "#959eb2"  # 4.6:1
+red     = "#d08b91"  # 4.6:1
+green   = "#a3be8c"  # 6.1:1
+yellow  = "#ebcb8b"  # 8.0:1
+blue    = "#81a1c1"  # 4.6:1
+magenta = "#b792b0"  # 4.6:1
+cyan    = "#88c0d0"  # 6.2:1
+white   = "#e5e9f0"  # 10.3:1
+
+[colors.bright]
+black   = "#a3acbf"  # 5.5:1
+red     = "#e0989e"  # 5.4:1
+green   = "#b9d1a4"  # 7.6:1
+yellow  = "#f2dcae"  # 9.3:1
+blue    = "#9dbad6"  # 6.2:1
+magenta = "#cba7c4"  # 5.9:1
+cyan    = "#a5d4e0"  # 7.8:1
+white   = "#f2f5fa"  # 11.4:1

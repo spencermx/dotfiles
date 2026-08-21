@@ -1,0 +1,27 @@
+# Tomorrow -- The classic light scheme.
+# Body text 8.5:1, dimmest accent 3.4:1 (cyan).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#ffffff"
+foreground = "#4d4d4c"
+
+[colors.normal]
+black   = "#000000"  # 21.0:1
+red     = "#c82829"  # 5.5:1
+green   = "#718c00"  # 3.9:1
+yellow  = "#a08200"  # 3.7:1
+blue    = "#4271ae"  # 5.0:1
+magenta = "#8959a8"  # 5.2:1
+cyan    = "#3e999f"  # 3.4:1
+white   = "#8e908c"  # 3.2:1
+
+[colors.bright]
+black   = "#8e908c"  # 3.2:1
+red     = "#c82829"  # 5.5:1
+green   = "#718c00"  # 3.9:1
+yellow  = "#a08200"  # 3.7:1
+blue    = "#4271ae"  # 5.0:1
+magenta = "#8959a8"  # 5.2:1
+cyan    = "#3e999f"  # 3.4:1
+white   = "#2d2d2c"  # 13.8:1

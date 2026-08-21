@@ -1,0 +1,27 @@
+# Ayu Light -- Soft, low saturation.
+# Body text 6.1:1, dimmest accent 2.1:1 (yellow).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#fcfcfc"
+foreground = "#5c6166"
+
+[colors.normal]
+black   = "#000000"  # 20.5:1
+red     = "#e65050"  # 3.6:1
+green   = "#6cbf43"  # 2.2:1
+yellow  = "#eba217"  # 2.1:1
+blue    = "#399ee6"  # 2.8:1
+magenta = "#a37acc"  # 3.3:1
+cyan    = "#4cbf99"  # 2.2:1
+white   = "#cccccc"  # 1.6:1
+
+[colors.bright]
+black   = "#686868"  # 5.4:1
+red     = "#d13b3b"  # 4.7:1
+green   = "#86b300"  # 2.4:1
+yellow  = "#f2ae49"  # 1.9:1
+blue    = "#2b8ad9"  # 3.6:1
+magenta = "#9370c9"  # 3.8:1
+cyan    = "#3ea48a"  # 3.0:1
+white   = "#d9d9d9"  # 1.4:1
