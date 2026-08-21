@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Swap the Alacritty colour scheme by rewriting the import line in
+# ~/.config/alacritty/alacritty.toml. Alacritty reloads on write, so the new
+# theme lands in every open window immediately -- no restart, no new shell.
+#
+#   alacritty-theme            list themes, contrast ratios, and the active one
+#   alacritty-theme nord       switch to nord
+#
+# Themes live in ~/.config/alacritty-themes/ (a link into the dotfiles repo),
+# so switching is a tracked change you can commit or revert like anything else.
+set -euo pipefail
+
+THEMES="$HOME/.config/alacritty-themes"
+CONFIG="$HOME/.config/alacritty/alacritty.toml"
+
+[ -d "$THEMES" ] || { echo "no theme directory at $THEMES" >&2; exit 1; }
+[ -r "$CONFIG" ] || { echo "no alacritty config at $CONFIG" >&2; exit 1; }
+
+current() {
+    sed -n 's#.*alacritty-themes/\([a-z0-9-]*\)\.toml.*#\1#p' "$CONFIG" | head -1
+}
+
+# "Body text 9.2:1, dimmest accent 4.6:1 (red)." from the theme file header.
+ratios() {
+    sed -n 's/^# \(Body text .*\)$/\1/p' "$1" | head -1
+}
+
+if [ $# -eq 0 ]; then
+    active="$(current)"
+    printf '%-26s %s\n' "THEME" "CONTRAST"
+    for f in "$THEMES"/*.toml; do
+        name="$(basename "$f" .toml)"
+        mark=" "; [ "$name" = "$active" ] && mark="*"
+        printf '%s %-24s %s\n' "$mark" "$name" "$(ratios "$f")"
+    done
+    echo
+    echo "* = active. Higher 'dimmest accent' means syntax highlighting stays"
+    echo "  readable; 4.5:1 is the WCAG AA floor."
+    exit 0
+fi
+
+name="${1%.toml}"
+target="$THEMES/$name.toml"
+if [ ! -r "$target" ]; then
+    echo "no such theme: $name" >&2
+    echo "run '$(basename "$0")' with no arguments to list them" >&2
+    exit 1
+fi
+
+# Rewrite through a temp file, then cat over the original. $CONFIG is a symlink
+# into the repo and `sed -i` would replace the link with a regular file.
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed "s#alacritty-themes/[a-z0-9-]*\.toml#alacritty-themes/$name.toml#" \
+    "$CONFIG" > "$tmp"
+
+if ! grep -q "alacritty-themes/$name.toml" "$tmp"; then
+    echo "no import line found in $CONFIG -- nothing swapped" >&2
+    exit 1
+fi
+
+cat "$tmp" > "$CONFIG"
+echo "$name  --  $(ratios "$target")"

@@ -1,0 +1,27 @@
+# PaperColor Light -- Flat greys, saturated accents.
+# Body text 8.4:1, dimmest accent 3.6:1 (blue).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#eeeeee"
+foreground = "#444444"
+
+[colors.normal]
+black   = "#444444"  # 8.4:1
+red     = "#af0000"  # 6.4:1
+green   = "#008700"  # 4.1:1
+yellow  = "#5f8700"  # 3.7:1
+blue    = "#0087af"  # 3.6:1
+magenta = "#870087"  # 7.6:1
+cyan    = "#005f87"  # 6.1:1
+white   = "#878787"  # 3.1:1
+
+[colors.bright]
+black   = "#5f5f5f"  # 5.5:1
+red     = "#d70000"  # 4.7:1
+green   = "#00875f"  # 3.9:1
+yellow  = "#875f00"  # 4.9:1
+blue    = "#005faf"  # 5.6:1
+magenta = "#af00af"  # 5.3:1
+cyan    = "#00799f"  # 4.3:1
+white   = "#3a3a3a"  # 9.8:1

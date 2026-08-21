@@ -1,0 +1,27 @@
+# Catppuccin Latte -- Cool grey-white, pastel accents.
+# Body text 7.1:1, dimmest accent 2.3:1 (yellow).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#eff1f5"
+foreground = "#4c4f69"
+
+[colors.normal]
+black   = "#5c5f77"  # 5.5:1
+red     = "#d20f39"  # 4.8:1
+green   = "#40a02b"  # 3.0:1
+yellow  = "#df8e1d"  # 2.3:1
+blue    = "#1e66f5"  # 4.3:1
+magenta = "#ea76cb"  # 2.3:1
+cyan    = "#179299"  # 3.3:1
+white   = "#acb0be"  # 1.9:1
+
+[colors.bright]
+black   = "#6c6f85"  # 4.4:1
+red     = "#b8172e"  # 5.8:1
+green   = "#338020"  # 4.4:1
+yellow  = "#b57216"  # 3.4:1
+blue    = "#1553c4"  # 6.1:1
+magenta = "#c05ba6"  # 3.5:1
+cyan    = "#12787e"  # 4.6:1
+white   = "#8c8fa1"  # 2.8:1

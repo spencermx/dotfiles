@@ -1,35 +1,17 @@
-# Alacritty Configuration File (TOML)
+# Alacritty -- desktop.
+#
+# Colours are not set here. They come from one file under
+# ~/.config/alacritty-themes/, chosen by the import below; swap it with
+#
+#     alacritty-theme <name>          # or with no argument, to list them
+#
+# Alacritty reloads on write, so the change lands in every open window at once.
+[general]
+import = ["~/.config/alacritty-themes/nord-legible.toml"]
+
 [font]
-size = 10.666666 # Font size for clear readability
-normal = { family = "JetBrainsMono Nerd Font", style = "Regular" } # Monospace font for terminal consistency
-
-[colors.primary]
-# background = "#2d0e05" # Deep blue-green for a calm, dark aesthetic
-# background = "#2d0d05" # Deep blue-green for a calm, dark aesthetic
-# -background = "#002b36"
-# -foreground = "#839496"
-background = "#360000" # Deep blue-green for a calm, dark aesthetic
-foreground = "#cccccc" # Light gray-blue for readable text contrast
-
-[colors.normal]
-black = "#073642" # Dark teal for subtle background elements
-red = "#dc322f" # Vibrant red for alerts and emphasis
-green = "#859900" # Olive green for success and highlights
-yellow = "#b58900" # Warm amber for warnings and attention
-blue = "#268bd2" # Bright blue for clear, cool contrast
-magenta = "#d33682" # Rich magenta for distinct, bold elements
-cyan = "#2aa198" # Teal-cyan for refreshing, balanced accents
-white = "#eee8d5" # Off-white for soft, readable text
-
-[colors.bright]
-black = "#002b36" # Deep blue-green, matching background for consistency
-red = "#cb4b16" # Bright orange-red for highlighted alerts
-green = "#586e75" # Muted slate green for subtle bright accents
-yellow = "#657b83" # Pale gray-yellow for understated highlights
-blue = "#839496" # Light gray-blue, matching foreground for cohesion
-magenta = "#6c71c4" # Soft lavender for bright, distinct elements
-cyan = "#93a1a1" # Pale cyan for clear, bright accents
-white = "#fdf6e3" # Creamy white for maximum brightness and clarity
+size = 10.666666
+normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
 
 [selection]
 save_to_clipboard = true
@@ -38,10 +20,3 @@ save_to_clipboard = true
 key = "Return"
 mods = "Shift"
 chars = "\u001B\r"
-
-# [keyboard]
-# bindings = [
-#   { key = "T", mods = "Alt", chars = "\u001bt" },
-#   { key = "Y", mods = "Alt", chars = "Test Alt-Y" }  # Test binding
-# ]
-

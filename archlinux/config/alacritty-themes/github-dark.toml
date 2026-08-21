@@ -1,0 +1,27 @@
+# GitHub Dark -- Near-black, bright accents.
+# Body text 12.3:1, dimmest accent 7.4:1 (green).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#0d1117"
+foreground = "#c9d1d9"
+
+[colors.normal]
+black   = "#484f58"  # 2.3:1
+red     = "#ff7b72"  # 7.5:1
+green   = "#3fb950"  # 7.4:1
+yellow  = "#d29922"  # 7.5:1
+blue    = "#58a6ff"  # 7.5:1
+magenta = "#bc8cff"  # 7.5:1
+cyan    = "#39c5cf"  # 9.1:1
+white   = "#b1bac4"  # 9.6:1
+
+[colors.bright]
+black   = "#6e7681"  # 4.1:1
+red     = "#ffa198"  # 9.7:1
+green   = "#56d364"  # 9.8:1
+yellow  = "#e3b341"  # 9.7:1
+blue    = "#79c0ff"  # 9.7:1
+magenta = "#d2a8ff"  # 9.7:1
+cyan    = "#56d4dd"  # 10.7:1
+white   = "#f0f6fc"  # 17.4:1

@@ -1,0 +1,27 @@
+# Gruvbox Light -- Warm cream, dark accent set.
+# Body text 10.2:1, dimmest accent 3.3:1 (yellow).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#fbf1c7"
+foreground = "#3c3836"
+
+[colors.normal]
+black   = "#3c3836"  # 10.2:1
+red     = "#9d0006"  # 7.6:1
+green   = "#79740e"  # 4.3:1
+yellow  = "#b57614"  # 3.3:1
+blue    = "#076678"  # 5.8:1
+magenta = "#8f3f71"  # 5.9:1
+cyan    = "#427b58"  # 4.4:1
+white   = "#7c6f64"  # 4.3:1
+
+[colors.bright]
+black   = "#928374"  # 3.2:1
+red     = "#cc241d"  # 4.8:1
+green   = "#98971a"  # 2.7:1
+yellow  = "#d79921"  # 2.2:1
+blue    = "#458588"  # 3.7:1
+magenta = "#b16286"  # 3.7:1
+cyan    = "#689d6a"  # 2.8:1
+white   = "#3c3836"  # 10.2:1

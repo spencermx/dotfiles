@@ -1,0 +1,27 @@
+# Catppuccin Latte Legible -- Latte hues dropped in lightness until every accent clears 4.5:1.
+# Body text 7.1:1, dimmest accent 4.6:1 (green).
+# Ratios are WCAG 2.1, measured against this file's own background.
+
+[colors.primary]
+background = "#eff1f5"
+foreground = "#4c4f69"
+
+[colors.normal]
+black   = "#5c5f77"  # 5.5:1
+red     = "#d20f39"  # 4.8:1
+green   = "#317c21"  # 4.6:1
+yellow  = "#976014"  # 4.6:1
+blue    = "#1660f5"  # 4.6:1
+magenta = "#c51e99"  # 4.6:1
+cyan    = "#13787e"  # 4.6:1
+white   = "#666c82"  # 4.6:1
+
+[colors.bright]
+black   = "#6c6f85"  # 4.4:1
+red     = "#b8172e"  # 5.8:1
+green   = "#2a6b1c"  # 5.8:1
+yellow  = "#82520f"  # 5.9:1
+blue    = "#1553c4"  # 6.1:1
+magenta = "#a81a81"  # 5.9:1
+cyan    = "#106469"  # 6.1:1
+white   = "#4c4f69"  # 7.1:1
