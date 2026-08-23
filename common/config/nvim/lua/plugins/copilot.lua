@@ -1,5 +1,6 @@
 return {
     "github/copilot.vim",
+    enabled = false,
     lazy = false, -- Load immediately (if using Lazy.nvim)
     config = function()
         -- Disable default Tab mapping to avoid conflicts
