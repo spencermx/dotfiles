@@ -892,6 +892,7 @@ tomlplusplus 3.4.0-1
 tpm2-tss 4.1.3-1
 tree 2.2.1-1
 tree-sitter 0.25.10-1
+tree-sitter-cli 0.26.9-1
 tree-sitter-c 0.24.1-1
 tree-sitter-lua 0.4.0-1
 tree-sitter-markdown 0.5.1-1
