@@ -31,7 +31,7 @@
 -- hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@60", position = "4480x0", scale = 2 })
 
 -- 2 MONITOR 4k + 4k  <-- ACTIVE
--- DP-2     = ASUS ROG XG27UCDMG    4k OLED, 240Hz     left
+-- DP-1     = ASUS ROG XG27UCDMG    4k OLED, 240Hz     left
 -- HDMI-A-1 = Samsung Odyssey G81SF 4k, 120Hz max here right
 -- scale 2 on both -> each is 1920x1080 logical, so right sits at 1920x0
 hl.monitor({ output = "DP-2",     mode = "3840x2160@240", position = "0x0",    scale = 2 })
