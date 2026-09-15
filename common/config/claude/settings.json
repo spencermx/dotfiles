@@ -141,7 +141,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/dark/.local/bin/aivim --hook"
+            "command": "~/.local/bin/aivim --hook"
           }
         ]
       }
@@ -151,7 +151,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/dark/.local/bin/aivim --hook"
+            "command": "~/.local/bin/aivim --hook"
           }
         ]
       }
@@ -161,7 +161,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/dark/.local/bin/aivim --hook"
+            "command": "~/.local/bin/aivim --hook"
           }
         ]
       }
@@ -171,7 +171,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/dark/.local/bin/aivim --hook"
+            "command": "~/.local/bin/aivim --hook"
           }
         ]
       }
@@ -181,7 +181,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/dark/.local/bin/aivim --hook"
+            "command": "~/.local/bin/aivim --hook"
           }
         ]
       }
@@ -189,7 +189,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/home/dark/.local/bin/aivim --statusline"
+    "command": "~/.local/bin/aivim --statusline"
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
