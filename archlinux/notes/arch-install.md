@@ -50,8 +50,8 @@ so authenticating `gh` once is enough for both `git clone` and everything
 gh auth login
 # GitHub.com -> HTTPS -> log in via browser -> account: spencermx
 
-git clone https://github.com/spencermx/dotfiles.git ~/source/repos-spencermx/dotfiles
-cd ~/source/repos-spencermx/dotfiles/archlinux
+git clone https://github.com/spencermx/dotfiles.git ~/source/repos/dotfiles
+cd ~/source/repos/dotfiles/archlinux
 ./setup.sh --dry-run   # see what it will do first
 ./setup.sh
 ```
