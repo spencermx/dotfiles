@@ -284,7 +284,7 @@ package.
 
 ### Console, locale, input
 ```
-console-setup kbd locales keyboard-configuration
+console-setup kbd locales keyboard-configuration physlock
 ```
 Set a large console font in `/etc/default/console-setup` —
 `FONTFACE="Terminus" FONTSIZE="16x32"`. At 1080p on a 14" panel the default
@@ -292,6 +292,14 @@ Set a large console font in `/etc/default/console-setup` —
 
 The kernel dropped console scrollback in 5.9, so **tmux is the only way to
 scroll**. It is not a convenience here.
+
+The console also has no lock implementation of its own. `loginctl lock-session`
+only asks a session manager to activate its existing locker; on this bare TTY
+there is no manager listening and therefore no password prompt. `physlock`
+locks every Linux virtual console and authenticates through PAM. It is used
+instead of `vlock` because it is designed to remain compatible with suspend,
+and its `-d` mode returns only after the consoles are secured, specifically for
+suspend/hibernate scripts.
 
 ### Toolchain
 ```
@@ -663,14 +671,17 @@ so `install_godot` keeps `stable_linux` adjacent in its match pattern.
     `suspend` rides the same mechanism because it hits the same wall: logind's
     `Suspend()` is a polkit action exactly as `Reboot()` is, so an
     unprivileged `systemctl suspend` is denied for the same reason and with
-    the same message. It is the mildest of the three — nothing is written,
-    nothing is killed, the session is still there on resume. The trigger is
-    removed *before* the action, which is load-bearing for suspend
-    specifically: the machine comes back, and a trigger left on disk would be
-    seen by the path unit on resume and put it straight back to sleep. The
-    kernel here offers s2idle only — `/sys/power/mem_sleep` reads `[s2idle]`,
-    so there is no S3 — and `disk` (hibernate) would need a swap area sized
-    for RAM, which this machine does not have.
+    the same message. Before creating the trigger, the shell runs
+    `physlock -d`; that call returns only once every virtual console is locked.
+    If locking fails, suspend is aborted rather than preserving an exposed
+    tmux session. On resume, PAM requires the console user's password before
+    returning to the session. The trigger is removed *before* the action,
+    which is load-bearing for suspend specifically: the machine comes back,
+    and a trigger left on disk would be seen by the path unit on resume and put
+    it straight back to sleep. The kernel here offers s2idle only —
+    `/sys/power/mem_sleep` reads `[s2idle]`, so there is no S3 — and `disk`
+    (hibernate) would need a swap area sized for RAM, which this machine does
+    not have.
 
     The cost is real and worth stating plainly: this is the one unprivileged
     trigger for a root action on the machine. It does exactly three things and
@@ -731,6 +742,10 @@ failure means fix it now, while root still exists.
 [ ] e() launches yazi and follows it on quit; ls/ll resolve (lsd present)
 [ ] tmux scrollback works (there is no console scrollback)
 [ ] brightnessctl changes brightness without a password
+[ ] `lock` hides the current session, blocks switching to every other virtual
+      console, rejects a wrong password, and accepts the user's password
+[ ] `suspend` establishes the physlock prompt before sleep; after resume the
+      tmux session is inaccessible until the user's password is entered
 [ ] `reboot` as the user actually reboots — via /run/user-power, not
       systemctl, which is denied here. This is the ONLY way a kernel
       update ever takes effect. Untested before the gate = a machine that

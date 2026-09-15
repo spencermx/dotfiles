@@ -103,12 +103,28 @@ _power_request() {
 reboot()   { _power_request reboot;   }
 poweroff() { _power_request poweroff; }
 
+# loginctl can only ask a session's existing screen locker to engage. There is
+# no session manager on a bare Linux console, so physlock owns the actual lock
+# and PAM password prompt. It locks every virtual console, not just tmux or the
+# current shell.
+lock() { command physlock; }
+
 # `suspend` is a bash *builtin* -- it SIGSTOPs the shell itself, which is how
 # you get back to a parent shell you shelled out of. Defining a function by
 # that name shadows it. That is the intended trade: the builtin refuses in a
 # login shell anyway, and `builtin suspend` still reaches it if it is ever
 # wanted. Sleep is the machine-level meaning of the word here.
-suspend()  { _power_request suspend;  }
+#
+# -d detaches only after physlock has secured the consoles. The root-owned path
+# unit cannot race ahead of the lock, and failure to lock prevents suspend
+# rather than leaving the live tmux session exposed on resume.
+suspend() {
+	command physlock -d || {
+		printf 'suspend: console lock failed; not suspending.\n' >&2
+		return 1
+	}
+	_power_request suspend
+}
 
 #---------------------------------------------------------------------------
 # Functions

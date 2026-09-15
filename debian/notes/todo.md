@@ -41,13 +41,18 @@ For any assistant continuing this work:
 - [ ] Test laptop suspend and resume as the normal user.
   Two paths now: the lid switch, which logind handles itself and which needs
   no authorisation, and the `suspend` shell function, which goes through
-  /run/user-power like `reboot` and `poweroff`. Test both on battery power,
-  then confirm the console, tmux session, clock, and NetworkManager connection
-  all recover. Do not combine this with another test that could force the
-  machine off. Note the lid path is untested on this hardware and the power
-  button was already found to raise no input event — if the lid raises none
-  either, the shell function is the only route and must be verified pre-gate,
-  since `user-suspend.path` is root-owned and cannot be added afterwards.
+  /run/user-power like `reboot` and `poweroff`. The shell function now runs
+  `physlock -d` first, which must establish the all-console lock before the
+  suspend trigger is created. Test `lock` by itself (including a wrong
+  password and virtual-console switching), then test command-driven suspend on
+  battery and confirm resume stops at physlock before the console, tmux
+  session, clock, and NetworkManager connection recover. The lid path does not
+  pass through the shell wrapper, so run `lock` before closing it. Do not
+  combine this with another test that could force the machine off. Note the
+  lid path is untested on this hardware and the power button was already found
+  to raise no input event — if the lid raises none either, the shell function
+  is the only route and must be verified pre-gate, since
+  `user-suspend.path` is root-owned and cannot be added afterwards.
 
 - [ ] Decide whether tmux should show update/reboot state.
   Automatic security updates are enabled, but kernel updates need the manual
@@ -98,12 +103,14 @@ For any assistant continuing this work:
   enable|disable` for the rest. `:lsp` has no `info` subcommand.
 
 - [ ] Re-run the root phase of `setup.sh` — the package list grew.
-  `libfontconfig1` (Godot dlopens it), `cmake`, plus `python3-venv` and `pipx`.
-  This is apt, so it can only ever happen before the gate. Without the Python
-  two, nothing can ever install a Python package on this machine again —
-  including `gdtoolkit`, which is the only GDScript formatter and linter that
-  exists here. Without `cmake`, `:MasonInstall luaformatter` cannot build, so
-  there is no Lua formatting either. From `debian/`:
+  `libfontconfig1` (Godot dlopens it), `cmake`, `python3-venv`, `pipx`, and
+  `physlock`. This is apt, so it can only ever happen before the gate. Without
+  `physlock`, neither the live console nor the command-driven suspend path can
+  be secured. Without the Python two, nothing can ever install a Python
+  package on this machine again — including `gdtoolkit`, which is the only
+  GDScript formatter and linter that exists here. Without `cmake`,
+  `:MasonInstall luaformatter` cannot build, so there is no Lua formatting
+  either. From `debian/`:
   `su -c './setup.sh --phase packages'` — the phase is a `--phase` value, not a
   positional argument, and `su -c ./setup.sh` would run `system` and the
   handoff too.
@@ -133,9 +140,8 @@ For any assistant continuing this work:
 
 - [ ] Decide the rest of the pre-gate apt list.
   `shellcheck` (this repo is a 39 KB bash script), `entr`/`inotify-tools` (no
-  file-watch loop otherwise), `vlock` (the console is currently unlocked when
-  you walk away), `sqlite3`, `tig`, `netcat-openbsd`, and `pass` if the
-  break-glass `ANTHROPIC_API_KEY` in `build-plan.md` is meant to be real.
+  file-watch loop otherwise), `sqlite3`, `tig`, `netcat-openbsd`, and `pass` if
+  the break-glass `ANTHROPIC_API_KEY` in `build-plan.md` is meant to be real.
   Deliberately excluded: `lazygit`, `shfmt`, `delta` — all ship static
   binaries and stay installable forever.
 

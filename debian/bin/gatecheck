@@ -55,6 +55,9 @@ esac
 [ -d /run/user-power ] \
     && ok "/run/user-power exists -- reboot/poweroff/suspend work without root" \
     || bad "/run/user-power missing -- kernel updates can never take effect"
+command -v physlock >/dev/null 2>&1 \
+    && ok "physlock present -- console can lock before suspend" \
+    || bad "physlock missing -- console and resumed sessions cannot be locked"
 for u in user-reboot.path user-poweroff.path user-suspend.path; do
     [ -f "/etc/systemd/system/$u" ] || bad "missing unit: $u"
 done
@@ -117,7 +120,8 @@ warn "connect to a NEVER-SEEN network (phone hotspot) as this user"
 warn "claude: /logout then log back in -- rehearse re-auth, do not assume it"
 warn "git push to a real repo over SSH"
 warn "reboot via /run/user-power actually reboots"
-warn "suspend resumes with console, tmux, clock and network intact"
+warn "lock blocks every virtual console and accepts the user's password"
+warn "suspend resumes at physlock, then restores console, tmux, clock and network"
 warn "GRUB superuser password set, passphrase written down"
 warn "BIOS supervisor password -- without it, F12 and a USB stick bypass GRUB"
 
