@@ -47,7 +47,7 @@ they share a shape, and reading one teaches you the others:
 |-|-------|--------|-----|---------|
 | packages | pacman | apt | Homebrew | winget |
 | shell | bash | bash | zsh | PowerShell |
-| phases | `packages` `links` `services` | see below | `packages` `paths` `links` `defaults` `tools` | `Packages` `Env` `Path` `Links` |
+| phases | `packages` `links` `services` `tools` | see below | `packages` `paths` `links` `defaults` `tools` | `Packages` `Env` `Path` `Links` |
 
 `debian/` is the odd one out and breaks two of the rules above deliberately: it
 has no display server, and it is provisioned once behind a one-way gate after
