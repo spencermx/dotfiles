@@ -61,8 +61,9 @@ PACKAGES=(
     # system services
     unattended-upgrades systemd-timesyncd network-manager tlp fwupd
 
-    # console, locale, input
-    console-setup kbd locales
+    # console, locale, input. physlock is the screen locker: a bare Linux
+    # console has no session manager to answer loginctl's lock request.
+    console-setup kbd locales physlock
 
     # toolchain
     tmux vim git openssh-client build-essential python3 luarocks curl wget
@@ -152,7 +153,7 @@ TOOLS=(nvim gh yazi claude godot tree-sitter)
 # Debian's names, not the upstream ones: fd-find installs fdfind and bat
 # installs batcat. The shell config aliases them back; a script cannot see an
 # alias, so check for what is actually on disk.
-EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl claude gh yazi nmcli luarocks
+EXPECTED_COMMANDS=(git tmux nvim lsd rg fzf zoxide batcat fdfind brightnessctl physlock claude gh yazi nmcli luarocks
     # tree-sitter is checked here on purpose: without it every :TSInstall
     # fails silently and the editor still looks fine, so nothing else notices.
     godot tree-sitter)
