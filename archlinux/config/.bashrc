@@ -207,6 +207,9 @@ REPO_OPEN=code
 
 ################################################################# CUSTOM ##################################################################
 
+# aivim, from the tools repo: one key to the agent sessions.
+alias a=aivim
+
 ##. "$HOME/.cargo/env"
 
 export NVM_DIR="$HOME/.nvm"

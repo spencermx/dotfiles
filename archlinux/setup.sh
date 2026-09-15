@@ -3,16 +3,16 @@
 # Provisions an Arch machine from this repo.
 #
 #   ./setup.sh --dry-run          preview, changes nothing
-#   ./setup.sh                    run everything: packages, links, services (in that order)
+#   ./setup.sh                    run everything: packages, links, services, tools (in that order)
 #   ./setup.sh --phase packages            just install packages
 #   ./setup.sh --phase links               just symlink dotfiles
 #   ./setup.sh --phase services            just enable services
-#   ./setup.sh --phase packages,links      packages then links
-#   ./setup.sh --phase packages,services   packages then services
-#   ./setup.sh --phase links,services      links then services
+#   ./setup.sh --phase tools               just run the tools repo's installer
+#   ./setup.sh --phase packages,links      packages then links (any comma list works)
 #
 # packages/services need your sudo password -- run from a real terminal.
-# links needs no sudo. Safe to re-run; only touches what isn't already correct.
+# links and tools need no sudo. Safe to re-run; only touches what isn't
+# already correct.
 #
 # After packages installs github-cli, run `gh auth login` yourself once --
 # the script installs the binary, it doesn't log you in.
@@ -45,6 +45,8 @@ PACKAGES=(
     testdisk rsync zip gzip p7zip dosfstools hyprshot ddrescue iotop
     usbutils exfatprogs freerdp wlr-randr ntfs-3g nmap vulkan-tools sbctl tmux
     cups cups-filters avahi nss-mdns ghostscript nvme-cli
+    # rustup for the Rust tools in the tools repo; the tools phase selects a toolchain.
+    rustup
 )
 
 # Services to enable. From install4.sh.
@@ -124,7 +126,7 @@ skip()   { printf '%s   . %s%s\n' "$C_SKIP" "$*" "$C_OFF"; }
 warn()   { printf '%s   ! %s%s\n' "$C_WARN" "$*" "$C_OFF"; }
 
 DRY_RUN=0
-PHASES="packages links services"
+PHASES="packages links services tools"
 FAILED_PHASES=""
 PROBLEM_COUNT=0
 
@@ -190,8 +192,8 @@ parse_args() {
 
     for p in $PHASES; do
         case "$p" in
-            packages|links|services) ;;
-            *) echo "unknown phase: $p (packages links services)" >&2; exit 2 ;;
+            packages|links|services|tools) ;;
+            *) echo "unknown phase: $p (packages links services tools)" >&2; exit 2 ;;
         esac
     done
 }
@@ -371,11 +373,65 @@ phase_services() {
 }
 
 #---------------------------------------------------------------------------
+# Phase: tools
+#---------------------------------------------------------------------------
+
+# The tools repo installs its own programs: each tool owns its build and its
+# integrations, and tools/install.sh runs them all. This zone only finds the
+# checkout and calls it, so nothing here names an individual tool. Looked for
+# beside this repo first, then at the older location.
+find_tools_root() {
+    local c
+    for c in "$(dirname "$(dirname "$REPO_ROOT")")/tools" "$HOME/source/tools"; do
+        if [ -x "$c/install.sh" ]; then printf '%s' "$c"; return 0; fi
+    done
+    return 1
+}
+
+phase_tools() {
+    step 'Tools'
+
+    local root
+    if ! root="$(find_tools_root)"; then
+        skip 'no tools checkout with an install.sh -- nothing to do'
+        return
+    fi
+
+    # rustup installs without a toolchain: cargo is on PATH but refuses to run
+    # until one is selected.
+    if has rustup && ! rustup show active-toolchain >/dev/null 2>&1; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+            change 'would run rustup default stable'
+        else
+            change 'rustup default stable'
+            rustup default stable || { warn 'rustup failed -- cargo will not work'; fail_phase tools; return; }
+        fi
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        change "would run $(tilde "$root")/install.sh"
+        return
+    fi
+    change "running $(tilde "$root")/install.sh"
+    "$root/install.sh" || { warn 'tools installer reported errors -- check the output above'; fail_phase tools; }
+}
+
+#---------------------------------------------------------------------------
 # Health check
 #---------------------------------------------------------------------------
 
 verify() {
     step 'Health check'
+
+    # The tools repo checks its own programs, so this stays generic.
+    local troot
+    if troot="$(find_tools_root)"; then
+        if "$troot/install.sh" --check >/dev/null 2>&1; then
+            skip "tools ok           $(tilde "$troot")"
+        else
+            problem; warn "tools not installed  $(tilde "$troot") -- run --phase tools"
+        fi
+    fi
 
     local entry link target short c
     for entry in "${LINKS[@]}"; do
@@ -437,6 +493,7 @@ main() {
     wants_phase packages && phase_packages
     wants_phase links    && phase_links
     wants_phase services && phase_services
+    wants_phase tools    && phase_tools
 
     verify
 
