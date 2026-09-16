@@ -30,12 +30,17 @@
 -- hl.monitor({ output = "DP-1", mode = "3840x2160@60", position = "2560x0", scale = 2 })
 -- hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@60", position = "4480x0", scale = 2 })
 
--- 2 MONITOR 4k + 4k  <-- ACTIVE
+-- 2 MONITOR 4k + 4k
 -- DP-1     = ASUS ROG XG27UCDMG    4k OLED, 240Hz     left
 -- HDMI-A-1 = Samsung Odyssey G81SF 4k, 120Hz max here right
 -- scale 2 on both -> each is 1920x1080 logical, so right sits at 1920x0
-hl.monitor({ output = "DP-2",     mode = "3840x2160@240", position = "0x0",    scale = 2 })
-hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@120", position = "1920x0", scale = 2 })
+   hl.monitor({ output = "DP-2",     mode = "3840x2160@240", position = "0x0",    scale = 2 })
+   hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@120", position = "1920x0", scale = 2 })
+
+-- 1 MONITOR 1440p  <-- ACTIVE
+-- HDMI-A-1 = Lenovo T27h-30 27" 2560x1440, 60Hz max
+-- scale 1.25 -> 2048x1152 logical
+-- hl.monitor({ output = "HDMI-A-1", mode = "2560x1440@60", position = "0x0", scale = 1.25 })
 
 -- 1 MONITOR 2k
 -- hl.monitor({ output = "DP-1", mode = "2560x1440@60", position = "0x0", scale = 1.25 })
