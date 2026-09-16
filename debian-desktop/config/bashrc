@@ -1,0 +1,11 @@
+# Retain the user's CLI setup, then correct its console-only assumptions here.
+# This is loaded by desktop-terminal, not by physical TTYs or SSH sessions.
+if [[ -r $HOME/.bashrc ]]; then . "$HOME/.bashrc"; fi
+unset DOTFILES_CONSOLE
+export BROWSER=firefox-esr
+if [[ -n ${SWAYSOCK:-} ]]; then
+    lock() { "$HOME/.local/bin/desktop-control" lock; }
+    suspend() { "$HOME/.local/bin/desktop-control" suspend; }
+    reboot() { "$HOME/.local/bin/desktop-control" reboot; }
+    poweroff() { "$HOME/.local/bin/desktop-control" poweroff; }
+fi

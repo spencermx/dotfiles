@@ -981,6 +981,54 @@ phase_tools() {
             fail_phase tools
         fi
     fi
+
+    # Rust, for the programs in the tools repo below. rustup's own installer
+    # puts everything under ~/.cargo, so it needs no root and keeps working
+    # after the gate; build-essential from the packages phase is the linker.
+    # PATH is not modified by the installer -- .bashrc already lists
+    # ~/.cargo/bin -- so the phase names cargo's location itself.
+    local cargo_bin="$HOME/.cargo/bin"
+    if [ -x "$cargo_bin/cargo" ]; then
+        skipped "rustup present ($HOME/.cargo)"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? install rustup and a stable toolchain into ~/.cargo%s\n' "$C_SKIP" "$C_OFF"
+    else
+        added "installing rustup"
+        if curl -fsSL https://sh.rustup.rs \
+            | sh -s -- -y --no-modify-path --profile minimal >/dev/null 2>&1 \
+            && [ -x "$cargo_bin/cargo" ]; then
+            added "rustup -> $HOME/.cargo"
+        else
+            problem "rustup install failed"
+            fail_phase tools
+        fi
+    fi
+
+    # The tools repo installs its own programs (aivim and whatever joins it):
+    # each tool owns its build and its integrations, and tools/install.sh runs
+    # them all, so nothing here names an individual tool. The checkout sits
+    # beside this repo, the layout the README describes. Its --check is the
+    # presence test; a rebuild after pulling the tools repo is that repo's
+    # own ./install.sh, not a setup re-run.
+    local tools_root
+    tools_root="$(dirname "$(dirname "$REPO_ROOT")")/tools"
+    if [ ! -x "$tools_root/install.sh" ]; then
+        warned "no tools checkout at $tools_root -- aivim not installed"
+    elif [ ! -x "$cargo_bin/cargo" ]; then
+        warned "cargo missing -- tools repo skipped"
+    elif "$tools_root/install.sh" --check >/dev/null 2>&1; then
+        skipped "tools repo present ($(command -v aivim))"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        printf '   %s? run %s/install.sh%s\n' "$C_SKIP" "$tools_root" "$C_OFF"
+    else
+        added "running $tools_root/install.sh"
+        if PATH="$cargo_bin:$PATH" "$tools_root/install.sh"; then
+            added "tools repo -> $HOME/.local/bin"
+        else
+            problem "tools installer reported errors -- check the output above"
+            fail_phase tools
+        fi
+    fi
 }
 
 #---------------------------------------------------------------------------

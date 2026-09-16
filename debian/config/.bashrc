@@ -25,7 +25,7 @@ shopt -s histappend checkwinsize
 # ~/.local/bin first and deliberately: claude, gh, nvim, yazi and node all live
 # under $HOME so they can be updated after sudo is purged. Anything apt
 # installs is frozen at security patches, so a user-local copy must win.
-export PATH="$HOME/.local/bin:$HOME/.local/share/nvim/mason/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.local/share/nvim/mason/bin:$HOME/.cargo/bin:$PATH"
 
 # Programs started here are displayed on the Linux text console, even when
 # tmux makes TERM look like an ordinary screen-256color terminal. Shared
@@ -65,6 +65,11 @@ alias treenod="tree -I 'node_modules'"
 # root and so could never be fixed after the gate.
 command -v fdfind >/dev/null && alias fd=fdfind
 command -v batcat >/dev/null && alias bat=batcat
+
+# aivim, from the tools repo: one key to the agent sessions. Declared here
+# rather than left to `aivim --install`, which would otherwise append it to
+# ~/.bashrc -- a symlink into this repo.
+alias a=aivim
 
 # These were aliases to `systemctl reboot` / `systemctl poweroff`, on the
 # assumption that logind lets an active local session do it unprivileged. It

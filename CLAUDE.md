@@ -1,7 +1,9 @@
 # dotfiles
 
-Four self-contained OS zones — `archlinux/`, `debian/`, `mac/`, `windows/` — in
-one repository, each provisioning a machine from scratch with one script.
+Four OS zones — `archlinux/`, `debian/`, `mac/`, `windows/` — and a separate
+`debian-desktop/` Sway overlay in one repository, each with its own setup script.
+The desktop overlay adds a graphical session to an existing Debian desktop;
+it must not apply the console-only `debian/` hardening gate.
 [README.md](README.md) and the per-zone READMEs are current; read the relevant
 one before changing how a setup script works.
 
