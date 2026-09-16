@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Desktop actions; destructive session/power actions always have a Cancel default.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+action=${1:-menu}
+case "$action" in
+    menu)
+        choice=$(printf '%s\n' Lock Suspend 'Log out' Reboot 'Power off' | desktop-menu --prompt Power) || exit 0
+        case "$choice" in
+            Lock) action=lock ;; Suspend) action=suspend ;; 'Log out') action=logout ;;
+            Reboot) action=reboot ;; 'Power off') action=poweroff ;; *) exit 0 ;;
+        esac
+        ;;
+    lock|suspend|logout|reboot|poweroff) ;;
+    *) printf 'Usage: desktop-control [menu|lock|suspend|logout|reboot|poweroff]\n' >&2; exit 2 ;;
+esac
+case "$action" in
+    lock) exec swaylock --daemonize ;;
+    suspend)
+        # -f returns only after locking; failure prevents this suspend request.
+        swaylock --daemonize
+        exec systemctl suspend
+        ;;
+    logout|reboot|poweroff)
+        choice=$(printf '%s\n' Cancel Confirm | desktop-menu --prompt "Confirm $action") || exit 0
+        [[ $choice == Confirm ]] || exit 0
+        if [[ $action == logout ]]; then exec swaymsg exit; fi
+        exec systemctl "$action"
+        ;;
+esac

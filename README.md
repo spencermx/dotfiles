@@ -1,11 +1,12 @@
 # dotfiles
 
-Machine configuration for four operating systems. Each directory provisions
-one of them from scratch with a single script.
+Machine configuration for four operating systems, plus an optional Debian
+desktop profile. Each directory has its own setup script.
 
 ```
 archlinux/  Arch     ./setup.sh
 debian/     Debian   ./setup.sh    text-only ThinkPad; see debian/README.md
+debian-desktop/ Debian ./setup.sh  Sway desktop overlay; keeps Xfce available
 mac/        macOS    ./setup.sh
 windows/    Windows  .\setup.ps1
 ```
@@ -20,6 +21,8 @@ git clone https://github.com/spencermx/dotfiles.git ~/source/repos/dotfiles
 cd ~/source/repos/dotfiles/mac    && ./setup.sh --dry-run && ./setup.sh
 cd ~/source/repos/dotfiles/archlinux  && ./setup.sh --dry-run && ./setup.sh
 cd ~/source/repos/dotfiles/debian     && ./setup.sh --dry-run && ./setup.sh
+# For a Debian desktop (separate from the console-only profile):
+cd ~/source/repos/dotfiles/debian-desktop && ./setup.sh --dry-run && ./setup.sh
 ```
 
 ```powershell
@@ -53,6 +56,10 @@ they share a shape, and reading one teaches you the others:
 has no display server, and it is provisioned once behind a one-way gate after
 which `sudo` is purged, so "re-runnable" applies only to the phases that need
 no root. Read [debian/README.md](debian/README.md) before touching it.
+
+`debian-desktop/` adds Sway to an existing Debian 13 desktop. It installs and
+updates only its desktop packages and dependencies, preserves other desktop
+sessions, and does not apply the console-only profile's hardening gate.
 
 ## The zones are independent, except for `common/`
 
@@ -98,6 +105,8 @@ Each directory has its own README covering the parts that do not generalise:
   one `setup.sh`, and the health check that keeps it honest
 - [debian/README.md](debian/README.md) — a console-only ThinkPad with no X or
   Wayland, and the ordered gate that ends in `sudo` being purged
+- [debian-desktop/README.md](debian-desktop/README.md) — Sway with the Arch
+  Alt keymap, automatic tiling, Waybar and a readable Alacritty terminal
 - [mac/README.md](mac/README.md) — Karabiner and AeroSpace are one keymap split
   across two programs, and the PATH ordering that Homebrew requires
 - [windows/README.md](windows/README.md) — why Visual Studio is excluded from
