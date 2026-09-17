@@ -241,15 +241,19 @@ for i = 1, 10 do
 end
 
 -- aivim's picker (every session) and launcher (a directory browser): one
--- small floating terminal, closed by choosing. Alt+Shift alone (Shift
+-- small floating terminal, closed by choosing or by the same key again
+-- (aivim --popup toggles it). Alt+Shift alone (Shift
 -- released with Alt held) opens the picker; Alt+Shift+space is the same in
 -- case the bare-modifier bind misfires after Alt+Shift+digit.
 local aivim = "$HOME/.local/bin/aivim"
-local popup = "alacritty --class aivim-picker -e "
-hl.bind(mainMod .. " + SHIFT_L",       hl.dsp.exec_cmd(popup .. aivim .. " --pick"), { release = true })
-hl.bind(mainMod .. " + SHIFT + space", hl.dsp.exec_cmd(popup .. aivim .. " --pick"))
-hl.bind(mainMod .. " + SHIFT + n",     hl.dsp.exec_cmd(popup .. aivim .. " --new"))
-hl.bind(mainMod .. " + SHIFT + x",     hl.dsp.exec_cmd(aivim .. " --kill"))
+hl.bind(mainMod .. " + SHIFT_L",       hl.dsp.exec_cmd(aivim .. " --popup pick"), { release = true })
+hl.bind(mainMod .. " + SHIFT + space", hl.dsp.exec_cmd(aivim .. " --popup pick"))
+hl.bind(mainMod .. " + SHIFT + n",     hl.dsp.exec_cmd(aivim .. " --popup new"))
+hl.bind(mainMod .. " + SHIFT + c",     hl.dsp.exec_cmd(aivim .. " --dup claude"))
+hl.bind(mainMod .. " + SHIFT + x",     hl.dsp.exec_cmd(aivim .. " --dup codex"))
+hl.bind(mainMod .. " + SHIFT + d",     hl.dsp.exec_cmd(aivim .. " --kill"))
+hl.bind(mainMod .. " + SHIFT + bracketleft",  hl.dsp.exec_cmd(aivim .. " --go prev"))
+hl.bind(mainMod .. " + SHIFT + bracketright", hl.dsp.exec_cmd(aivim .. " --go next"))
 hl.window_rule({
     name  = "aivim-picker",
     match = { class = "^(aivim-picker)$" },
