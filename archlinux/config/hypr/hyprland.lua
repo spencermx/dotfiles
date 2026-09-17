@@ -34,8 +34,8 @@
 -- DP-1     = ASUS ROG XG27UCDMG    4k OLED, 240Hz     left
 -- HDMI-A-1 = Samsung Odyssey G81SF 4k, 120Hz max here right
 -- scale 2 on both -> each is 1920x1080 logical, so right sits at 1920x0
-   hl.monitor({ output = "DP-2",     mode = "3840x2160@240", position = "0x0",    scale = 2 })
-   hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@120", position = "1920x0", scale = 2 })
+hl.monitor({ output = "DP-2",     mode = "3840x2160@240", position = "0x0",    scale = 2 })
+hl.monitor({ output = "HDMI-A-1", mode = "3840x2160@120", position = "1920x0", scale = 2 })
 
 -- 1 MONITOR 1440p  <-- ACTIVE
 -- HDMI-A-1 = Lenovo T27h-30 27" 2560x1440, 60Hz max
@@ -232,12 +232,44 @@ hl.bind(mainMod .. " + k", hl.dsp.focus({ direction = "u" }))
 hl.bind(mainMod .. " + j", hl.dsp.focus({ direction = "d" }))
 
 -- Switch workspaces with mainMod + [0-9]
--- Move active window to a workspace with mainMod + SHIFT + [0-9]
+-- Jump to aivim session [0-9] with mainMod + SHIFT + [0-9] (0 is session 10).
+-- Hyprland's PATH has no ~/.local/bin, hence the full path.
 for i = 1, 10 do
     local key = i % 10 -- 10 maps to key 0
     hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i, follow = false }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.exec_cmd("$HOME/.local/bin/aivim --go " .. key))
 end
+
+-- aivim's picker (every session) and launcher (a directory browser): one
+-- small floating terminal, closed by choosing. Alt+Shift alone (Shift
+-- released with Alt held) opens the picker; Alt+Shift+space is the same in
+-- case the bare-modifier bind misfires after Alt+Shift+digit.
+local aivim = "$HOME/.local/bin/aivim"
+local popup = "alacritty --class aivim-picker -e "
+hl.bind(mainMod .. " + SHIFT_L",       hl.dsp.exec_cmd(popup .. aivim .. " --pick"), { release = true })
+hl.bind(mainMod .. " + SHIFT + space", hl.dsp.exec_cmd(popup .. aivim .. " --pick"))
+hl.bind(mainMod .. " + SHIFT + n",     hl.dsp.exec_cmd(popup .. aivim .. " --new"))
+hl.bind(mainMod .. " + SHIFT + x",     hl.dsp.exec_cmd(aivim .. " --kill"))
+hl.window_rule({
+    name  = "aivim-picker",
+    match = { class = "^(aivim-picker)$" },
+    float = true,
+    center = true,
+    size = "720 560",
+})
+
+-- Move the active window to a workspace: mainMod + m, then a digit.
+-- Each digit is bound twice so the move also leaves the mode.
+hl.bind(mainMod .. " + m", hl.dsp.submap("move"))
+hl.define_submap("move", function()
+    for i = 1, 10 do
+        local key = tostring(i % 10)
+        hl.bind(key, hl.dsp.window.move({ workspace = i, follow = false }))
+        hl.bind(key, hl.dsp.submap("reset"))
+    end
+    hl.bind("escape", hl.dsp.submap("reset"))
+    hl.bind("return", hl.dsp.submap("reset"))
+end)
 
 -- Move windows with mainMod + SHIFT + h/j/k/l
 hl.bind(mainMod .. " + SHIFT + h", hl.dsp.window.move({ direction = "l" }))
