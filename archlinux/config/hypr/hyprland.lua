@@ -255,6 +255,7 @@ hl.bind(mainMod .. " + SHIFT + t",     hl.dsp.exec_cmd(aivim .. " --dup shell"))
 hl.bind(mainMod .. " + SHIFT + d",     hl.dsp.exec_cmd(aivim .. " --kill"))
 hl.bind(mainMod .. " + SHIFT + bracketleft",  hl.dsp.exec_cmd(aivim .. " --go prev"))
 hl.bind(mainMod .. " + SHIFT + bracketright", hl.dsp.exec_cmd(aivim .. " --go next"))
+hl.bind(mainMod .. " + SHIFT + a",     hl.dsp.exec_cmd(aivim .. " --go need"))
 hl.window_rule({
     name  = "aivim-picker",
     match = { class = "^(aivim-picker)$" },
