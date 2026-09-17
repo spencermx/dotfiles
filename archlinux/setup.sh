@@ -42,6 +42,8 @@ PACKAGES=(
     firejail proton-vpn-gtk-app mesa-demos mesa-utils
     noto-fonts ttf-dejavu ttf-liberation archlinux-keyring
     plasma-workspace gwenview hyprpaper lsd
+    # desktop notifications: the daemon, and notify-send for whatever raises them
+    mako libnotify
     testdisk rsync zip gzip p7zip dosfstools hyprshot ddrescue iotop
     usbutils exfatprogs freerdp wlr-randr ntfs-3g nmap vulkan-tools sbctl tmux
     cups cups-filters avahi nss-mdns ghostscript nvme-cli
