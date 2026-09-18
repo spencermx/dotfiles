@@ -33,8 +33,8 @@ start blueman-applet
 start /usr/libexec/polkit-mate-authentication-agent-1
 start autotiling
 start swayidle -w \
-    timeout 300 'desktop-control lock' \
-    timeout 600 'swaymsg "output * power off"' \
+    timeout 900 'desktop-control lock' \
+    timeout 1800 'swaymsg "output * power off"' \
         resume 'swaymsg "output * power on"' \
     before-sleep 'desktop-control lock' \
     after-resume 'swaymsg "output * power on"' \

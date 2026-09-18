@@ -91,7 +91,7 @@ use a live selection rather than Hyprshot's frozen preview.
   that fragment if deliberately migrating audio to PipeWire later.
 - Screen sharing uses the wlr portal and an explicit monitor chooser; file
   dialogs use the GTK portal. Portal preferences are specific to Sway.
-- Swayidle locks after five idle minutes and turns off displays after ten.
+- Swayidle locks after fifteen idle minutes and turns off displays after thirty.
   `before-sleep` locks before logind suspend (including lid suspend); the
   delay is bounded by logind's `InhibitDelayMaxSec`. The desktop suspend
   command also locks first and aborts its request if locking fails. Unlock
