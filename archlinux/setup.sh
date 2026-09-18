@@ -355,21 +355,21 @@ phase_services() {
         sudo systemctl enable "$s" || warn "failed to enable $s (system) -- continuing"
     done
 
-    # From install5.sh: make `vim` resolve to nvim system-wide. Only meaningful
-    # once neovim is installed, which is why it runs after packages.
+    # Make `vim` resolve to nvim. The link lives in ~/.local/bin, which .bashrc
+    # puts ahead of /usr/bin: linking over /usr/bin/vim itself gets undone by
+    # the next gvim upgrade, since pacman owns that file. Only meaningful once
+    # neovim is installed, which is why it runs after packages.
     if has nvim; then
-        local vim_path nvim_path
-        nvim_path="$(command -v nvim)"
-        vim_path="$(command -v vim 2>/dev/null)"
-        if [ -n "$vim_path" ] && [ "$(readlink -f "$vim_path" 2>/dev/null)" = "$nvim_path" ]; then
+        local vim_link="$HOME/.local/bin/vim" nvim_path
+        nvim_path="$(readlink -f "$(command -v nvim)")"
+        if [ "$(readlink -f "$vim_link" 2>/dev/null)" = "$nvim_path" ]; then
             skip 'vim already resolves to nvim'
         elif [ "$DRY_RUN" -eq 1 ]; then
             change 'would point vim at nvim'
-        elif [ -n "$vim_path" ]; then
-            change "vim -> nvim"
-            sudo ln -sf "$nvim_path" "$vim_path" || warn 'could not repoint vim'
         else
-            skip 'no vim on PATH to repoint'
+            change "vim -> nvim"
+            mkdir -p "$HOME/.local/bin"
+            ln -sfn "$nvim_path" "$vim_link" || warn 'could not point vim at nvim'
         fi
     fi
 }
