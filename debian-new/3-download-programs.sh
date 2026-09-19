@@ -8,7 +8,7 @@
 # never brings newer code. A program only moves when you edit its three lines
 # below (version, url, sha256) and run this again.
 #
-# So far: Neovim, yazi, tree-sitter, Node.
+# So far: Neovim, yazi, tree-sitter, Node, gh.
 
 set -euo pipefail
 
@@ -102,4 +102,23 @@ else
     ln -sf "$HOME/.local/share/node-dist/bin/npm"  "$HOME/.local/bin/npm"
     ln -sf "$HOME/.local/share/node-dist/bin/npx"  "$HOME/.local/bin/npx"
     echo "installed  node $NODE_VERSION"
+fi
+
+#---------------------------------------------------------------------------
+# gh, the GitHub CLI. Your `repo` command and git logins use it.
+# Debian ships 2.46, which is missing 8 security fixes (token leaks among them).
+# Every advisory gh has published is fixed by 2.98.0.
+#---------------------------------------------------------------------------
+GH_VERSION="2.100.0"         # released 2026-09-03
+GH_URL="https://github.com/cli/cli/releases/download/v2.100.0/gh_2.100.0_linux_amd64.tar.gz"
+GH_SHA256="e4d4bb4498e8d007abe545b6568926793ace1b6447da598294a610018cb164be"
+
+if [ -x "$HOME/.local/bin/gh" ] && "$HOME/.local/bin/gh" --version | head -1 | grep -qF "gh version $GH_VERSION "; then
+    echo "ok         gh $GH_VERSION"
+else
+    download_checked "$GH_URL" "$GH_SHA256" "$tmp/gh.tar.gz"
+    tar -xzf "$tmp/gh.tar.gz" -C "$tmp"
+    cp "$tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HOME/.local/bin/gh"
+    chmod +x "$HOME/.local/bin/gh"
+    echo "installed  gh $GH_VERSION"
 fi

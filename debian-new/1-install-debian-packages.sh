@@ -30,9 +30,6 @@ PACKAGES=(
     man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
     procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
     python3-venv pipx cmake libfontconfig1
-
-    # GitHub CLI, for the `repo` command and git logins
-    gh
 )
 
 #---------------------------------------------------------------------------
