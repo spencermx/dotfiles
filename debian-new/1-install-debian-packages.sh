@@ -59,9 +59,8 @@ SWAY_PACKAGES=(
     bluez blueman
 
     # sound controls. pactl (in pulseaudio-utils) is what the volume keys run;
-    # it talks to PipeWire fine. NOT here: pulseaudio-module-bluetooth, which is
-    # in debian-desktop/setup.sh. It drags in PulseAudio, and on a PipeWire
-    # machine apt would have to remove GNOME's audio to fit it.
+    # it talks to PipeWire fine. Do not add pulseaudio-module-bluetooth: it
+    # drags in PulseAudio, and apt would have to remove GNOME's audio to fit it.
     pulseaudio-utils pavucontrol
 
     # media keys, screenshots, clipboard, notifications
