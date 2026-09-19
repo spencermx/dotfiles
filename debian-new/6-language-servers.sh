@@ -6,7 +6,8 @@
 #
 # They are installed through Mason, a Neovim plugin, each at ONE exact version.
 # Running this again never brings newer code. To move one, change its version
-# in SERVERS below and run this again.
+# in SERVERS below and run this again. The npm packages underneath the servers
+# are frozen to NPM_FREEZE_DATE, also below.
 #
 # IMPORTANT: your nvim config lists these same six under `ensure_installed`
 # (common/config/nvim/lua/plugins/mason-lspconfig.lua). That setting installs
@@ -33,6 +34,15 @@ SERVERS=(
     "rust-analyzer@2026-08-31"            # Rust         released 2026-08-31
     "typescript-language-server@6.0.0"    # TypeScript   released 2026-08-20   (from npm)
 )
+
+# Pinning a server does not pin the packages UNDERNEATH it: npm picks those on
+# install day, and bash-language-server alone brings 39 of them. This date
+# freezes all of them: npm only uses versions that already existed on this day,
+# at every depth. It applies to the install command below and to nothing else
+# on your machine. It must be LATER than the release date of every npm server
+# above, or npm cannot find that server. Move it forward only together with a
+# server version, and keep it at least two weeks in the past.
+NPM_FREEZE_DATE="2026-09-05"
 
 MASON_DIR="$HOME/.local/share/nvim/mason/packages"
 
@@ -76,7 +86,7 @@ done
 
 if [ ${#to_install[@]} -gt 0 ]; then
     echo "installing: ${to_install[*]}"
-    nvim --headless -c "MasonInstall ${to_install[*]}" -c qall
+    npm_config_before="$NPM_FREEZE_DATE" nvim --headless -c "MasonInstall ${to_install[*]}" -c qall
 fi
 
 #---------------------------------------------------------------------------
