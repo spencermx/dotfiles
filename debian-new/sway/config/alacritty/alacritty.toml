@@ -1,0 +1,39 @@
+# Arch's Nord Legible palette with a larger font for the laptop display.
+[font]
+size = 16
+normal = { family = "JetBrains Mono", style = "Regular" }
+
+[window]
+padding = { x = 3, y = 3 }
+
+[selection]
+save_to_clipboard = true
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
+
+[colors.primary]
+background = "#2e3440"
+foreground = "#d8dee9"
+
+[colors.normal]
+black = "#959eb2"
+red = "#d08b91"
+green = "#a3be8c"
+yellow = "#ebcb8b"
+blue = "#81a1c1"
+magenta = "#b792b0"
+cyan = "#88c0d0"
+white = "#e5e9f0"
+
+[colors.bright]
+black = "#a3acbf"
+red = "#e0989e"
+green = "#b9d1a4"
+yellow = "#f2dcae"
+blue = "#9dbad6"
+magenta = "#cba7c4"
+cyan = "#a5d4e0"
+white = "#f2f5fa"

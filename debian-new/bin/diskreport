@@ -1,0 +1,47 @@
+#!/bin/sh
+# What is filling the disk, and which of it can you still delete?
+#
+# The split is the point. After the gate there is no root, so anything under
+# /var is frozen at whatever size it has reached -- `apt clean` and
+# `journalctl --vacuum` both need privileges this machine will not have. Only
+# the $HOME column is yours forever.
+#
+# Sorted biggest first, root-owned marked, so a full disk six months from now
+# is a five-second read rather than an investigation.
+
+printf '\n== filesystem\n'
+df -h / | awk 'NR==1 {printf "  %s\n", $0} NR==2 {printf "  %s\n", $0}'
+
+printf '\n== yours, deletable without root\n'
+for d in "$HOME/.cache" "$HOME/.local/share/nvim" "$HOME/.local/share/nvim-dist" \
+         "$HOME/.npm" "$HOME/.nvm" "$HOME/.claude" "$HOME/source" \
+         "$HOME/.local/bin" "$HOME/.cargo"; do
+    [ -d "$d" ] || continue
+    printf '  %10s  %s\n' "$(du -sh "$d" 2>/dev/null | cut -f1)" "${d#"$HOME"/}"
+done | sort -rh -k1
+
+printf '\n== root-owned, frozen after the gate\n'
+for d in /var/cache/apt/archives /var/log/journal /var/log /var/lib/apt /boot; do
+    [ -d "$d" ] || continue
+    s="$(du -sh "$d" 2>/dev/null | cut -f1)"
+    printf '  %10s  %s\n' "${s:-?}" "$d"
+done | sort -rh -k1
+
+debs=$(ls /var/cache/apt/archives/*.deb 2>/dev/null | wc -l)
+[ "$debs" -gt 0 ] && printf '\n  %s cached .deb files.\n' "$debs" && \
+  printf '  APT::Periodic::AutocleanInterval is what stops this growing forever;\n' && \
+  printf '  set it before the gate, because apt clean needs root afterwards.\n'
+
+printf '\n== kernels\n'
+k=$(dpkg -l 'linux-image-[0-9]*' 2>/dev/null | grep -c '^ii')
+printf '  %s installed\n' "$k"
+[ "$k" -gt 3 ] && printf '  more than three. set Unattended-Upgrade::Remove-Unused-Kernel-Packages\n'
+printf '  (no separate /boot on this disk, so these eat root, not a small partition)\n'
+
+# Files, not directories. `du -ah | sort` looks useful and is not: the top of
+# it is always $HOME and its ancestors, which just restates the section above.
+printf '\n== biggest individual files\n'
+find "$HOME" -xdev -type f -printf '%s %p\n' 2>/dev/null | sort -rn | head -8 | \
+    awk -v h="$HOME" '{ s=$1; $1=""; sub(/^ /,""); p=$0; sub(h,"~",p);
+                        printf "  %7.0f MB  %s\n", s/1048576, p }'
+printf '\n'

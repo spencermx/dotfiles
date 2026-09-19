@@ -1,0 +1,78 @@
+#!/bin/sh
+# Where am I on the network, and what can I actually reach?
+#
+# Answers the four questions in the order they break, so the first FAIL is the
+# thing to fix rather than a symptom of it:
+#
+#   link      associated to an access point at all?
+#   address   did DHCP give an IP, a gateway and a DNS server?
+#   reach     does the gateway answer, and does DNS resolve?
+#   internet  does traffic actually leave, or is a portal holding it?
+#
+# The last line is the one that matters in a library: "captive portal" here
+# means run `portal` next. Companion to that script, not a replacement.
+
+ok()   { printf '  \033[32mok  \033[0m %s\n' "$*"; }
+bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$*"; }
+info() { printf '       %s\n' "$*"; }
+
+dev="$(nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null \
+       | awk -F: '$2=="wifi" && $3=="connected" {print $1; exit}')"
+[ -n "$dev" ] || dev="$(ip -o route show default 2>/dev/null | awk '{print $5; exit}')"
+
+printf '\n== link\n'
+if [ -z "$dev" ]; then
+    bad "no connected interface -- nmcli device wifi list"
+    exit 1
+fi
+ssid="$(nmcli -t -f GENERAL.CONNECTION device show "$dev" 2>/dev/null | cut -d: -f2)"
+signal="$(nmcli -t -f IN-USE,SIGNAL device wifi list 2>/dev/null \
+          | awk -F: '$1=="*" {print $2; exit}')"
+ok "$dev connected${ssid:+ to \"$ssid\"}${signal:+, signal ${signal}%}"
+mtu="$(ip -o link show "$dev" 2>/dev/null | sed 's/.*mtu \([0-9]*\).*/\1/')"
+[ -n "$mtu" ] && info "mtu $mtu"
+
+printf '\n== address\n'
+ip4="$(ip -4 -o addr show "$dev" 2>/dev/null | awk '{print $4; exit}')"
+gw="$(ip -o route show default 2>/dev/null | awk '{print $3; exit}')"
+dns="$(nmcli -t -f IP4.DNS device show "$dev" 2>/dev/null | cut -d: -f2 | tr '\n' ' ')"
+[ -n "$ip4" ] && ok "address $ip4" || bad "no IPv4 address -- DHCP did not complete"
+[ -n "$gw" ]  && ok "gateway $gw"  || bad "no default route"
+[ -n "$dns" ] && ok "dns $dns"     || bad "no DNS server offered"
+
+printf '\n== reach\n'
+if [ -n "$gw" ] && ping -c1 -W2 "$gw" >/dev/null 2>&1; then
+    ok "gateway answers"
+else
+    bad "gateway silent -- some networks block ping, not conclusive on its own"
+fi
+if command -v dig >/dev/null 2>&1; then
+    local_ans="$(dig +short +time=3 +tries=1 detectportal.firefox.com 2>/dev/null | tail -1)"
+    pub_ans="$(dig +short +time=3 +tries=1 @1.1.1.1 detectportal.firefox.com 2>/dev/null | tail -1)"
+    if [ -z "$local_ans" ]; then
+        bad "DNS does not resolve"
+    elif [ -n "$pub_ans" ] && [ "$local_ans" != "$pub_ans" ]; then
+        bad "DNS HIJACKED: local says $local_ans, 1.1.1.1 says $pub_ans"
+        info "that is a captive portal redirecting lookups"
+    else
+        ok "DNS resolves ($local_ans)"
+    fi
+fi
+
+printf '\n== internet\n'
+code="$(curl -sS -o /dev/null -m 8 \
+        -w '%{http_code} %{redirect_url}' \
+        http://connectivitycheck.gstatic.com/generate_204 2>/dev/null)"
+status="${code%% *}"
+where="${code#* }"
+case "$status" in
+    204) ok "reachable -- traffic leaves this machine" ;;
+    30*) bad "CAPTIVE PORTAL -> ${where:-unknown}"
+         info "next: portal inspect ${where}" ;;
+    000|"") bad "nothing answered -- blocked, or not really online" ;;
+    *)   bad "unexpected HTTP $status -- transparent proxy"
+         info "next: portal" ;;
+esac
+nm="$(nmcli networking connectivity 2>/dev/null)"
+[ -n "$nm" ] && info "NetworkManager says: $nm"
+printf '\n'

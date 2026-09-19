@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""Captive portal detection and form inspection for a machine with no browser.
+
+The Linux console has no browser, so the usual "a page opens and you click
+Agree" flow does not exist here. This script does the three steps that flow
+hides: find out whether a portal is intercepting traffic, find its URL, and
+show what its form actually wants submitted.
+
+Only the Python standard library is used, and that is not a style preference.
+Debian marks the system interpreter EXTERNALLY-MANAGED, so `pip install` is
+refused, and after the gate there is no root to install a system package with.
+`requests` and BeautifulSoup are permanently unavailable on this machine --
+urllib, http.cookiejar and html.parser are the whole toolbox.
+
+    portal                 detect a portal and print its URL
+    portal inspect [URL]   fetch the portal page and dump every form field
+    portal submit URL [name=value ...]   send a form back, session preserved
+
+The cookie jar persists between invocations, because portals hand out a session
+cookie on the first redirect and reject anything submitted without it.
+"""
+
+import http.cookiejar
+import os
+import ssl
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from html.parser import HTMLParser
+
+# Probes are HTTP on purpose, and switching them to HTTPS breaks detection
+# entirely. A portal cannot intercept TLS without producing a certificate
+# error, so an HTTPS probe fails or hangs instead of revealing the redirect.
+# Plain HTTP is what lets the portal answer in place of the real server.
+PROBES = [
+    ("http://connectivitycheck.gstatic.com/generate_204", 204, ""),
+    ("http://detectportal.firefox.com/success.txt", 200, "success"),
+    ("http://network-test.debian.org/nm", 200, "NetworkManager is online"),
+    ("http://captive.apple.com/hotspot-detect.html", 200, "Success"),
+]
+
+UA = "Mozilla/5.0 (X11; Linux x86_64) portal-probe"
+CACHE = os.path.expanduser("~/.cache/portal")
+JAR_PATH = os.path.join(CACHE, "cookies.txt")
+
+
+def jar():
+    os.makedirs(CACHE, exist_ok=True)
+    j = http.cookiejar.MozillaCookieJar(JAR_PATH)
+    if os.path.exists(JAR_PATH):
+        try:
+            j.load(ignore_discard=True)
+        except Exception:
+            pass
+    return j
+
+
+def opener(cookiejar, follow=True, insecure=False):
+    handlers = [urllib.request.HTTPCookieProcessor(cookiejar)]
+    if insecure:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        handlers.append(urllib.request.HTTPSHandler(context=ctx))
+    if not follow:
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *a, **kw):
+                return None
+        handlers.append(NoRedirect())
+    o = urllib.request.build_opener(*handlers)
+    o.addheaders = [("User-Agent", UA)]
+    return o
+
+
+def fetch(url, cookiejar, follow=True, data=None, insecure=False, timeout=10):
+    """Return (status, final_url, body, headers). Never raises on HTTP errors."""
+    o = opener(cookiejar, follow=follow, insecure=insecure)
+    try:
+        r = o.open(url, data=data, timeout=timeout)
+        return r.status, r.geturl(), r.read(500000).decode("utf-8", "replace"), r.headers
+    except urllib.error.HTTPError as e:
+        # 3xx with redirects disabled lands here, which is the portal signal.
+        return e.code, url, e.read(500000).decode("utf-8", "replace"), e.headers
+    except ssl.SSLError as e:
+        return -2, url, str(e), {}
+    except Exception as e:
+        return -1, url, str(e), {}
+
+
+class FormParser(HTMLParser):
+    """Pull out every <form> with its inputs.
+
+    Portals put the parts that matter in hidden fields -- CSRF tokens, the
+    client MAC, the AP MAC, a session id -- so a POST built by hand from the
+    visible fields alone is rejected. Everything is captured, hidden included.
+    """
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.forms = []
+        self.current = None
+        self.scripts = 0
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "form":
+            self.current = {
+                "action": a.get("action", ""),
+                "method": a.get("method", "get").upper(),
+                "fields": [],
+            }
+        elif tag == "script":
+            self.scripts += 1
+        elif tag in ("input", "select", "textarea"):
+            f = {
+                "tag": tag,
+                "type": a.get("type", "text"),
+                "name": a.get("name", ""),
+                "value": a.get("value", ""),
+            }
+            if self.current is not None:
+                self.current["fields"].append(f)
+            else:
+                # Some portals emit inputs outside any <form> and wire them up
+                # with JavaScript. Worth seeing rather than silently dropping,
+                # so collect them into one pseudo-form.
+                if not self.forms or self.forms[-1]["method"] != "-":
+                    self.forms.append({"action": "(no enclosing form)",
+                                       "method": "-", "fields": []})
+                self.forms[-1]["fields"].append(f)
+        elif tag == "meta" and a.get("http-equiv", "").lower() == "refresh":
+            # A meta refresh is a redirect that curl -L will not follow.
+            content = a.get("content", "")
+            if "url=" in content.lower():
+                self.forms.append({"action": "(meta refresh) " +
+                                   content.split("=", 1)[-1].strip(),
+                                   "method": "REDIRECT", "fields": []})
+
+    def handle_endtag(self, tag):
+        if tag == "form" and self.current is not None:
+            self.forms.append(self.current)
+            self.current = None
+
+
+def detect():
+    """Probe until something disagrees with what it should say."""
+    print("probing (HTTP, not HTTPS -- TLS cannot be intercepted silently)\n")
+    j = jar()
+    portal_url = None
+    reachable = 0
+
+    for url, want_status, want_body in PROBES:
+        status, final, body, headers = fetch(url, j, follow=False)
+        host = urllib.parse.urlparse(url).netloc
+
+        if status in (301, 302, 303, 307, 308):
+            loc = headers.get("Location", "")
+            print(f"  {host:38} {status} -> {loc}")
+            portal_url = portal_url or loc
+        elif status == want_status and want_body in body:
+            print(f"  {host:38} {status} as expected")
+            reachable += 1
+        elif status > 0:
+            # A 200 that says the wrong thing means something answered in the
+            # real server's place. The body usually is the portal, or carries
+            # a meta refresh or JS redirect to it.
+            print(f"  {host:38} {status} UNEXPECTED BODY ({len(body)} bytes)")
+            p = FormParser()
+            p.feed(body)
+            for f in p.forms:
+                if f["method"] == "REDIRECT":
+                    print(f"  {'':38} meta refresh -> {f['action']}")
+                    portal_url = portal_url or f["action"].replace("(meta refresh) ", "")
+            portal_url = portal_url or url
+        else:
+            print(f"  {host:38} unreachable ({body[:60]})")
+
+    j.save(ignore_discard=True)
+    print()
+
+    if portal_url:
+        print(f"CAPTIVE PORTAL detected\n  {portal_url}\n")
+        print(f"next:  portal inspect {portal_url}")
+        return 2
+    if reachable:
+        print("no portal -- the network is open")
+        return 0
+    print("no connectivity at all: not associated, no DHCP, or DNS is blocked")
+    print("check:  nmcli device status  /  nmcli connection show --active")
+    return 1
+
+
+def inspect(url, insecure=False):
+    j = jar()
+    status, final, body, _ = fetch(url, j, follow=True, insecure=insecure)
+    j.save(ignore_discard=True)
+
+    if status == -2:
+        print(f"TLS verification failed: {body}\n")
+        print("Portals very often present a self-signed or hostname-mismatched")
+        print("certificate. Re-run with --insecure if you accept that whatever")
+        print("you submit goes to an unverified host:")
+        print(f"  portal inspect {url} --insecure")
+        return 1
+    if status < 0:
+        print(f"could not fetch: {body}")
+        return 1
+
+    print(f"status {status}\nfinal  {final}\n")
+    p = FormParser()
+    p.feed(body)
+
+    if not p.forms:
+        print("No forms found.")
+        if p.scripts:
+            print(f"\n{p.scripts} <script> tags and no form: this portal is")
+            print("probably JavaScript-driven. Neither this script nor w3m can")
+            print("complete it -- use a phone hotspot, or authorise on another")
+            print("device and clone its MAC (see debian/notes/build-plan.md).")
+        return 1
+
+    for i, f in enumerate(p.forms):
+        action = urllib.parse.urljoin(final, f["action"]) if f["action"] else final
+        print(f"[form {i}] {f['method']} {action}")
+        for fl in f["fields"]:
+            if not fl["name"]:
+                continue
+            mark = "  (hidden)" if fl["type"] == "hidden" else ""
+            print(f"    {fl['name']:24} = {fl['value']!r:30} type={fl['type']}{mark}")
+        print()
+
+    f = p.forms[0]
+    action = urllib.parse.urljoin(final, f["action"]) if f["action"] else final
+    pairs = " ".join(f"{fl['name']}={fl['value'] or '?'}"
+                     for fl in f["fields"] if fl["name"])
+    print("Submit it by echoing the fields back, changing only what needs it")
+    print("(a checkbox usually wants its value set, e.g. accept=on):\n")
+    print(f"  portal submit {action} {pairs}")
+    return 0
+
+
+def submit(url, pairs, insecure=False):
+    data = {}
+    for p in pairs:
+        if "=" not in p:
+            print(f"bad field {p!r}, expected name=value")
+            return 1
+        k, v = p.split("=", 1)
+        data[k] = v
+
+    print(f"POST {url}")
+    for k, v in data.items():
+        print(f"    {k} = {v!r}")
+    print()
+
+    j = jar()
+    body = urllib.parse.urlencode(data).encode()
+    status, final, text, _ = fetch(url, j, follow=True, data=body, insecure=insecure)
+    j.save(ignore_discard=True)
+
+    if status < 0:
+        print(f"submit failed: {text}")
+        return 1
+    print(f"status {status}, landed on {final}\n")
+    print("re-probing to see whether it actually took effect:\n")
+    return detect()
+
+
+def main():
+    args = [a for a in sys.argv[1:] if a != "--insecure"]
+    insecure = "--insecure" in sys.argv
+
+    if not args or args[0] == "detect":
+        return detect()
+    if args[0] == "inspect":
+        if len(args) < 2:
+            print("usage: portal inspect URL [--insecure]")
+            return 1
+        return inspect(args[1], insecure)
+    if args[0] == "submit":
+        if len(args) < 2:
+            print("usage: portal submit URL [name=value ...] [--insecure]")
+            return 1
+        return submit(args[1], args[2:], insecure)
+
+    print(__doc__)
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

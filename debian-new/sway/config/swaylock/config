@@ -1,0 +1,11 @@
+color=2e3440
+font=JetBrains Mono
+font-size=22
+indicator-radius=80
+indicator-thickness=8
+inside-color=2e3440
+ring-color=88c0d0
+key-hl-color=a3be8c
+text-color=eceff4
+show-failed-attempts
+ignore-empty-password

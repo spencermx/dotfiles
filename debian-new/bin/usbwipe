@@ -1,0 +1,253 @@
+#!/bin/bash
+# Destroy everything on a removable USB disk and lay down a fresh filesystem.
+#
+#   sudo usbwipe /dev/sdX [--fs ext4|exfat] [--label NAME] [--yes]
+#
+# `rm` on a stick unlinks the inode and frees the blocks; it does not touch the
+# bytes, and on ext4 the filenames survive in the jbd2 journal after the extent
+# tree is zeroed. So a stick that once held anything private is not safe to hand
+# to another machine until the whole device has been overwritten -- scrubbing
+# only the free space leaves the journal, the reserved-block pool, and any
+# small files stored inline in inodes.
+#
+# TRIM first, because it takes seconds instead of an hour: blkdiscard tells the
+# controller to mark every block invalid. Cheap USB bridges do not pass the
+# command through, and this box has one that does not, so the dd fallback is
+# the path that actually runs here. Budget ~50 minutes for 115G -- flash writes
+# fast into its SLC cache for the first few GB, then settles to its real speed.
+#
+# One pass is enough. Multi-pass overwrite was about magnetic remanence on
+# 1990s MFM drives and does nothing on flash. What a full overwrite does not
+# beat is a controller's over-provisioned spare cells, which no host-side
+# command can address -- if that is the threat, the answer was LUKS from the
+# start, and disposal is physical destruction rather than reuse.
+
+set -euo pipefail
+
+# `su` without a dash keeps the calling user's PATH, which on this box has no
+# /usr/sbin -- where wipefs, blkdiscard, sfdisk and mkfs.ext4 all live. Setting
+# it here means the script works under sudo, su, and su - alike.
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+export PATH
+
+DEV=""
+FS="ext4"
+LABEL="usbdata"
+MNT="/mnt/usbdata"
+ASSUME_YES=0
+SKIP_WIPE=0
+
+die() { printf '\nABORT: %s\n' "$*" >&2; exit 1; }
+say() { printf '\n== %s\n' "$*"; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --fs)     FS="${2:-}"; shift 2 ;;
+        --label)  LABEL="${2:-}"; shift 2 ;;
+        --yes|-y) ASSUME_YES=1; shift ;;
+        --no-wipe) SKIP_WIPE=1; shift ;;
+        -h|--help)
+            cat <<-HELP
+			usbwipe -- erase a USB stick past recovery, then format it.
+
+			  sudo usbwipe /dev/sdX [options]
+
+			Overwrites every byte on the device, creates one full-disk
+			partition, formats it, and mounts it ready to copy files into.
+			Deleted files on the old filesystem are gone afterwards -- an
+			ordinary rm is not, which is what this is for.
+
+			Refuses to run on anything that is not a removable USB disk, and
+			on any disk holding /, /boot, /boot/efi or /home.
+
+			OPTIONS
+
+			  --fs ext4|exfat   Filesystem to create. Default ext4.
+
+			                    ext4 is Linux-only. A Mac or Windows machine
+			                    cannot read it at all and will say the disk is
+			                    unreadable. Use exfat for a stick that has to
+			                    work anywhere. (exfat needs: apt install
+			                    exfatprogs)
+
+			  --label NAME      Volume name, shown in the file manager.
+			                    Default usbdata.
+
+			  --yes             Do not ask for confirmation. Without this you
+			                    must type ERASE at the prompt. The safety
+			                    checks on the device still run either way --
+			                    this skips only the typing.
+
+			  --no-wipe         Skip the overwrite; only repartition, reformat
+			                    and remount. Seconds instead of up to an hour.
+			                    Use when a stick was already wiped by a
+			                    previous run and you just want a different
+			                    filesystem on it. It still destroys everything
+			                    currently on the disk -- it is not a way to
+			                    keep your files.
+
+			  -h, --help        This text.
+
+			TIME
+
+			  Most of the run is the overwrite. If the stick's USB bridge
+			  supports TRIM it takes seconds; most cheap ones do not, and then
+			  every byte is written -- roughly 45 minutes for a 60G stick at
+			  typical flash speed. The script tells you which path it took.
+			  Everything after that is seconds.
+
+			EXAMPLES
+
+			  Wipe a stick and set it up to carry files to a Mac:
+			    sudo usbwipe /dev/sdb --fs exfat --label USBDATA
+
+			  Same stick, changing your mind about the filesystem afterwards,
+			  without sitting through the overwrite again:
+			    sudo usbwipe /dev/sdb --fs ext4 --no-wipe
+
+			  Find the right /dev/sdX first:
+			    lsblk -o NAME,SIZE,TRAN,MODEL,LABEL
+
+			AFTERWARDS
+
+			  The new filesystem is mounted at $MNT and owned by you, so
+			  copy files in without sudo. Then: umount $MNT
+			HELP
+            exit 0 ;;
+        -*)       die "unknown option: $1" ;;
+        *)        DEV="$1"; shift ;;
+    esac
+done
+
+[ -n "$DEV" ] || die "no device given. Try: ${0##*/} --help
+       and find the device with: lsblk -o NAME,SIZE,TRAN,MODEL,LABEL"
+[ "$(id -u)" -eq 0 ] || die "must run as root"
+[ -b "$DEV" ] || die "$DEV is not a block device"
+
+case "$FS" in
+    ext4|exfat) ;;
+    *) die "--fs must be ext4 or exfat" ;;
+esac
+
+# Resolve every tool before the confirmation prompt. A binary discovered
+# missing between blkdiscard and mkfs would leave the stick wiped, unformatted,
+# and needing the whole hour again.
+NEEDED="lsblk findmnt umount wipefs blkdiscard sfdisk partx dd"
+[ "$FS" = "ext4" ]  && NEEDED="$NEEDED mkfs.ext4"
+[ "$FS" = "exfat" ] && NEEDED="$NEEDED mkfs.exfat"   # exfatprogs, not installed by default
+MISSING=""
+for TOOL in $NEEDED; do
+    command -v "$TOOL" >/dev/null 2>&1 || MISSING="$MISSING $TOOL"
+done
+[ -z "$MISSING" ] || die "missing tools:$MISSING"
+
+# ------------------------------------------------------------------ safety --
+# Naming the wrong device here destroys a system disk. None of these are
+# advisory and none of them can be skipped with --yes.
+
+PARENT="$(lsblk -ndo PKNAME "$DEV" || true)"
+[ -z "$PARENT" ] || die "$DEV is a partition of /dev/$PARENT; pass the whole disk"
+
+[ "$(lsblk -ndo TRAN "$DEV")" = "usb" ]  || die "$DEV is not on the USB transport"
+[ "$(lsblk -ndo HOTPLUG "$DEV")" = "1" ] || die "$DEV is not hotplug-removable"
+
+for CRITICAL in / /boot /boot/efi /home; do
+    SRC="$(findmnt -no SOURCE "$CRITICAL" 2>/dev/null || true)"
+    [ -n "$SRC" ] || continue
+    [ "$SRC" = "$DEV" ] && die "$CRITICAL lives on $DEV"
+    HOLDER="$(lsblk -ndo PKNAME "$SRC" 2>/dev/null || true)"
+    [ -n "$HOLDER" ] && [ "/dev/$HOLDER" = "$DEV" ] && die "$CRITICAL lives on $DEV"
+done
+
+MODEL="$(lsblk -ndo MODEL "$DEV" | tr -s ' ')"
+SIZE="$(lsblk -ndo SIZE "$DEV")"
+
+say "target: $DEV  --  $MODEL  $SIZE"
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT "$DEV"
+
+if [ "$ASSUME_YES" -ne 1 ]; then
+    printf '\nEverything on %s will be destroyed. Type ERASE to continue: ' "$DEV"
+    read -r REPLY </dev/tty
+    [ "$REPLY" = "ERASE" ] || die "not confirmed"
+fi
+
+# -------------------------------------------------------------------- wipe --
+say "unmounting anything on $DEV"
+for PART in $(lsblk -nlo NAME "$DEV" | tail -n +2); do
+    umount "/dev/$PART" 2>/dev/null || true
+done
+swapoff "$DEV"?* 2>/dev/null || true   # a live image may have a swap partition
+
+say "clearing filesystem signatures"
+# An ISO hybrid image leaves iso9660, dos, gpt and mac signatures behind. mkfs
+# overwrites only the one it cares about, so blkid and udev keep seeing ghosts.
+wipefs -a "$DEV"
+
+if [ "$SKIP_WIPE" -eq 1 ]; then
+    say "skipping the overwrite (--no-wipe)"
+elif say "discarding all blocks (TRIM)" && blkdiscard -f "$DEV" 2>/dev/null; then
+    echo "TRIM completed"
+else
+    echo "TRIM unsupported by this bridge; falling back to a full overwrite."
+    echo "This writes every byte and will take a while on $SIZE."
+    # dd exits nonzero on the expected ENOSPC at end-of-device; that is success.
+    dd if=/dev/zero of="$DEV" bs=4M status=progress conv=fsync || true
+    sync
+fi
+
+# ------------------------------------------------------------------ format --
+say "creating GPT and one full-disk partition"
+# sfdisk rather than parted: it ships in util-linux, already required above for
+# wipefs and blkdiscard, so this needs no package that Debian omits. An empty
+# size field fills the disk; start=2048 puts it on a 1MiB boundary.
+#
+# The GPT type GUID matters for exFAT. macOS expects exFAT inside a Microsoft
+# basic data partition and will report "the disk you attached was not readable"
+# for one typed as Linux filesystem, however valid the filesystem itself is.
+if [ "$FS" = "exfat" ]; then
+    PARTTYPE="EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"   # Microsoft basic data
+else
+    PARTTYPE="linux"
+fi
+sfdisk --wipe always --wipe-partitions always "$DEV" <<-EOF
+	label: gpt
+	start=2048, type=$PARTTYPE
+EOF
+partx -u "$DEV" 2>/dev/null || true
+udevadm settle 2>/dev/null || sleep 2
+
+PART="${DEV}1"
+[ -b "$PART" ] || PART="${DEV}p1"
+[ -b "$PART" ] || die "partition did not appear after sfdisk"
+
+say "formatting $PART as $FS"
+case "$FS" in
+    ext4)  mkfs.ext4 -F -L "$LABEL" "$PART" ;;
+    exfat) mkfs.exfat -n "$LABEL" "$PART" ;;
+esac
+
+# ----------------------------------------------------------------- handoff --
+mkdir -p "$MNT"
+
+# Under sudo/su, $USER is root. Hand the mount to whoever invoked, or copying
+# files in afterwards needs privileges too.
+OWNER="${SUDO_USER:-}"
+if [ -z "$OWNER" ] && [ -n "${LOGNAME:-}" ] && [ "$LOGNAME" != "root" ]; then
+    OWNER="$LOGNAME"
+fi
+[ -n "$OWNER" ] && id "$OWNER" >/dev/null 2>&1 || OWNER="root"
+
+# ext4 carries Unix ownership, so chown after mounting. exFAT has no such
+# concept -- everything belongs to whoever mounted it, and chown is silently
+# useless -- so ownership has to be handed over as a mount option instead.
+if [ "$FS" = "exfat" ] && [ "$OWNER" != "root" ]; then
+    mount -o "uid=$(id -u "$OWNER"),gid=$(id -g "$OWNER"),umask=0022" "$PART" "$MNT"
+else
+    mount "$PART" "$MNT"
+    [ "$OWNER" != "root" ] && chown "$OWNER:$(id -gn "$OWNER")" "$MNT"
+fi
+
+say "done"
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINT "$DEV"
+printf '\nMounted at %s, writable by %s.\n' "$MNT" "$OWNER"
+printf 'Copy your files in, then: umount %s\n' "$MNT"

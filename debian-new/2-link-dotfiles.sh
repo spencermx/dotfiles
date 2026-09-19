@@ -8,42 +8,45 @@
 #   LINKS        shell, git, tmux, editors, your helper commands, Claude Code
 #   SWAY_LINKS   the Sway desktop's config and helper commands
 #
-# Each line in a list is:   <link in your home folder>   <file in this repo>
+# Each line in a list is:   <link in your home folder>   <file it points to>
+# Every file is inside this folder (debian-new/), except the ones shared with
+# your other machines, which stay in common/.
 # If something is already at the link path, it is moved to <name>.bak first.
 # Safe to run again: links that are already correct are left alone.
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # this folder, debian-new/
+REPO="$(dirname "$HERE")"                                   # the repo root, only for common/
 
 LINKS=(
     # shell (.bashrc loads .bashrc.repo, which is the `repo` command)
-    "$HOME/.bashrc                 $REPO/debian/config/.bashrc"
+    "$HOME/.bashrc                 $HERE/config/.bashrc"
     "$HOME/.bashrc.repo            $REPO/common/config/shell/repo.bash"
 
     # git (.gitconfig loads .gitconfig.common)
-    "$HOME/.gitconfig              $REPO/debian/config/.gitconfig"
+    "$HOME/.gitconfig              $HERE/config/.gitconfig"
     "$HOME/.gitconfig.common       $REPO/common/config/.gitconfig"
     "$HOME/.config/git/ignore      $REPO/common/config/git/ignore"
 
     # tmux (.tmux.conf loads .tmux.conf.common)
-    "$HOME/.tmux.conf              $REPO/debian/config/.tmux.conf"
+    "$HOME/.tmux.conf              $HERE/config/.tmux.conf"
     "$HOME/.tmux.conf.common       $REPO/common/config/.tmux.conf"
-    "$HOME/.local/bin/tmux-battery $REPO/debian/bin/tmux-battery"
+    "$HOME/.local/bin/tmux-battery $HERE/bin/tmux-battery"
 
     # editors and file manager
     "$HOME/.vimrc                  $REPO/common/config/.vimrc"
     "$HOME/.config/nvim            $REPO/common/config/nvim"
-    "$HOME/.config/yazi/theme.toml $REPO/debian/config/yazi/theme.toml"
+    "$HOME/.config/yazi/theme.toml $HERE/config/yazi/theme.toml"
 
     # your helper commands
-    "$HOME/.local/bin/portal       $REPO/debian/bin/portal"
-    "$HOME/.local/bin/printers     $REPO/debian/bin/printers"
-    "$HOME/.local/bin/netreport    $REPO/debian/bin/netreport"
-    "$HOME/.local/bin/gatecheck    $REPO/debian/bin/gatecheck"
-    "$HOME/.local/bin/diskreport   $REPO/debian/bin/diskreport"
-    "$HOME/.local/bin/toolcheck    $REPO/debian/bin/toolcheck"
-    "$HOME/.local/share/man/man1/notes-tmux.1 $REPO/debian/man/man1/notes-tmux.1"
+    "$HOME/.local/bin/portal       $HERE/bin/portal"
+    "$HOME/.local/bin/printers     $HERE/bin/printers"
+    "$HOME/.local/bin/netreport    $HERE/bin/netreport"
+    "$HOME/.local/bin/gatecheck    $HERE/bin/gatecheck"
+    "$HOME/.local/bin/diskreport   $HERE/bin/diskreport"
+    "$HOME/.local/bin/toolcheck    $HERE/bin/toolcheck"
+    "$HOME/.local/share/man/man1/notes-tmux.1 $HERE/man/man1/notes-tmux.1"
 
     # Claude Code. settings.json has hooks that run `aivim`, from your tools repo.
     "$HOME/.claude/CLAUDE.md       $REPO/common/config/claude/CLAUDE.md"
@@ -54,32 +57,27 @@ LINKS=(
 # SWAY DESKTOP
 #
 # Sway is put together from separate small programs, each with its own config
-# file, so there are a lot of them. The files themselves live in
-# debian-desktop/. None of this affects GNOME: only Sway's programs read these.
-#
-# NOT linked, on purpose: debian-desktop/config/wireplumber/90-preserve-pulseaudio.conf
-# It switches off WirePlumber's sound and bluetooth handling so that PulseAudio
-# can do it. This machine has no PulseAudio, so linking it would mean no sound.
+# file, so there are a lot of them. The files themselves live in sway/ in this
+# folder. None of this affects GNOME: only Sway's programs read these.
 #---------------------------------------------------------------------------
 SWAY_LINKS=(
     # config files
-    "$HOME/.config/sway/config                        $REPO/debian-desktop/config/sway/config"            # key bindings, workspaces; starts desktop-session
-    "$HOME/.config/waybar/config                      $REPO/debian-desktop/config/waybar/config"          # the top bar: what it shows
-    "$HOME/.config/waybar/style.css                   $REPO/debian-desktop/config/waybar/style.css"       # the top bar: colours and fonts
-    "$HOME/.config/alacritty/alacritty.toml           $REPO/debian-desktop/config/alacritty/alacritty.toml" # the terminal
-    "$HOME/.config/mako/config                        $REPO/debian-desktop/config/mako/config"            # notification pop-ups
-    "$HOME/.config/swaylock/config                    $REPO/debian-desktop/config/swaylock/config"        # the lock screen
-    "$HOME/.config/xdg-desktop-portal/sway-portals.conf $REPO/debian-desktop/config/xdg-desktop-portal/sway-portals.conf" # screen sharing
-    "$HOME/.config/xdg-desktop-portal-wlr/sway        $REPO/debian-desktop/config/xdg-desktop-portal-wlr/sway"            # screen sharing: pick a monitor
-    "$HOME/.config/debian-desktop/bashrc              $REPO/debian-desktop/config/bashrc"                 # loaded by the Sway terminal after .bashrc
+    "$HOME/.config/sway/config                        $HERE/sway/config/sway/config"            # key bindings, workspaces; starts desktop-session
+    "$HOME/.config/waybar/config                      $HERE/sway/config/waybar/config"          # the top bar: what it shows
+    "$HOME/.config/waybar/style.css                   $HERE/sway/config/waybar/style.css"       # the top bar: colours and fonts
+    "$HOME/.config/alacritty/alacritty.toml           $HERE/sway/config/alacritty/alacritty.toml" # the terminal
+    "$HOME/.config/mako/config                        $HERE/sway/config/mako/config"            # notification pop-ups
+    "$HOME/.config/swaylock/config                    $HERE/sway/config/swaylock/config"        # the lock screen
+    "$HOME/.config/xdg-desktop-portal/sway-portals.conf $HERE/sway/config/xdg-desktop-portal/sway-portals.conf" # screen sharing
+    "$HOME/.config/xdg-desktop-portal-wlr/sway        $HERE/sway/config/xdg-desktop-portal-wlr/sway"            # screen sharing: pick a monitor
 
     # helper commands that the Sway key bindings call
-    "$HOME/.local/bin/desktop-session                 $REPO/debian-desktop/bin/desktop-session"           # runs at login: tray icons, notifications, idle lock
-    "$HOME/.local/bin/desktop-terminal                $REPO/debian-desktop/bin/desktop-terminal"          # Alt+Enter
-    "$HOME/.local/bin/desktop-menu                    $REPO/debian-desktop/bin/desktop-menu"              # Alt+D program launcher
-    "$HOME/.local/bin/desktop-control                 $REPO/debian-desktop/bin/desktop-control"           # lock, suspend, log out, reboot, power off
-    "$HOME/.local/bin/desktop-screenshot              $REPO/debian-desktop/bin/desktop-screenshot"        # Print key
-    "$HOME/.local/bin/desktop-swap                    $REPO/debian-desktop/bin/desktop-swap"              # Alt+S swap two windows
+    "$HOME/.local/bin/desktop-session                 $HERE/sway/bin/desktop-session"           # runs at login: tray icons, notifications, idle lock
+    "$HOME/.local/bin/desktop-terminal                $HERE/sway/bin/desktop-terminal"          # Alt+Enter
+    "$HOME/.local/bin/desktop-menu                    $HERE/sway/bin/desktop-menu"              # Alt+D program launcher
+    "$HOME/.local/bin/desktop-control                 $HERE/sway/bin/desktop-control"           # lock, suspend, log out, reboot, power off
+    "$HOME/.local/bin/desktop-screenshot              $HERE/sway/bin/desktop-screenshot"        # Print key
+    "$HOME/.local/bin/desktop-swap                    $HERE/sway/bin/desktop-swap"              # Alt+S swap two windows
 )
 
 if [ "$(id -u)" -eq 0 ]; then
