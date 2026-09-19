@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-export BEMENU_BACKEND=wayland
-menu=bemenu
-if [[ ${1:-} == run ]]; then menu=bemenu-run; shift; fi
-exec "$menu" --ignorecase --fn 'JetBrains Mono 14' --list 10 \
-    --tb '#88c0d0' --tf '#2e3440' --fb '#2e3440' --ff '#eceff4' \
-    --nb '#2e3440' --nf '#d8dee9' --hb '#5e81ac' --hf '#ffffff' "$@"
