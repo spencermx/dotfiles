@@ -102,8 +102,9 @@ use a live selection rather than Hyprshot's frozen preview.
   authentication agent, autotiling and swayidle, and stops its children on
   Sway shutdown. Log: `~/.local/state/debian-desktop/session.log`.
 - `desktop-terminal` loads your existing `~/.bashrc` and then the desktop
-  overrides. They remove `DOTFILES_CONSOLE`, set the browser and use Swaylock
-  for `lock`/`suspend`. Physical TTYs and existing tmux sessions are unchanged.
+  overrides. They remove `DOTFILES_CONSOLE`, set the browser, use Swaylock
+  for `lock`/`suspend` and add `fe` to open Thunar here, as on Arch and the
+  Mac. Physical TTYs and existing tmux sessions are unchanged.
 
 Sway reserves the Alt bindings before terminal applications see them. Tmux's
 existing prefix bindings still work; its console-specific clipboard config is
