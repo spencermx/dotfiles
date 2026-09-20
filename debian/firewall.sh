@@ -11,6 +11,7 @@
 # saved enough information for an exact undo. Its original backups are retained.
 # --enable migrates an old installation without stopping nftables.service or
 # flushing other tables. See firewall.md before applying to another machine.
+# Changing commands append their history to /var/log/untrusted-network-firewall/.
 #
 # This blocks unsolicited connections to the host, with control exceptions.
 # Existing connections remain allowed. It does not authenticate routers/DHCP/DNS,
@@ -41,9 +42,14 @@ STATE_DIR=/var/lib/untrusted-network-firewall
 SYSCTL_CONF=/etc/sysctl.d/99-untrusted-network.conf
 MODULE_CONF=/etc/modprobe.d/99-untrusted-network.conf
 LOCK_FILE=/run/lock/untrusted-network-firewall.lock
+LOG_DIR=/var/log/untrusted-network-firewall
+LOG_FILE=$LOG_DIR/history.log
 PRINTING_UNITS=( cups.service cups.socket cups.path cups-browsed.service avahi-daemon.service avahi-daemon.socket )
 OTHER_UNITS=( ModemManager.service bluetooth.service )
 work=
+log_fd=
+log_run_id=
+log_state_ready=no
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
@@ -59,6 +65,8 @@ Usage: $0 OPTION
 
 Use sudo for --enable, --disable, and --harden.
 --disable leaves hardening and service settings in place.
+Changing commands keep a private history in $LOG_FILE.
+Read it with: sudo less $LOG_FILE
 
 Preferences at the top of this script:
   ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK
@@ -69,6 +77,87 @@ Run --enable after changing network or printing rules.
 Run --harden to apply printing, discovery, modem, and Bluetooth service settings.
 See firewall.md for details about protection, interface scope, and migration.
 HELP
+}
+
+log_event() {
+    local event="$1" fields=
+    shift
+    if [ "$#" -gt 0 ]; then printf -v fields ' %q' "$@"; fi
+    TZ=UTC printf '[%(%Y-%m-%dT%H:%M:%SZ)T] run=%s %s%s\n' \
+        -1 "$log_run_id" "$event" "$fields" >&"$log_fd"
+}
+
+record_state() {
+    log_event STATE "$1"
+    # Observation errors are recorded, never presented as an empty ruleset or
+    # a successful restore. The operation performs its own mandatory checks.
+    if ! show_status >&"$log_fd" 2>&1; then
+        log_event STATE_INCOMPLETE "$1"
+    fi
+}
+
+finish_action() {
+    local result=$?
+    trap - EXIT ERR HUP INT TERM
+    set +e
+    if [ "$log_state_ready" = yes ]; then record_state after; fi
+    if [ -n "$work" ]; then rm -rf -- "$work"; fi
+    exit "$result"
+}
+
+run_logged() {
+    local action="$1" result
+    local pipeline_status=()
+    # Keep log creation inside a private directory. Never append through a
+    # symlink or hard link, or take ownership of someone else's log location.
+    if [ ! -e "$LOG_DIR" ] && [ ! -L "$LOG_DIR" ]; then mkdir -m 700 "$LOG_DIR"; fi
+    [ -d "$LOG_DIR" ] && [ ! -L "$LOG_DIR" ] && [ -O "$LOG_DIR" ] ||
+        die "unsafe log directory: $LOG_DIR"
+    chmod 700 "$LOG_DIR"
+    [ ! -L "$LOG_FILE" ] || die "refusing symlink log: $LOG_FILE"
+    if [ -e "$LOG_FILE" ]; then
+        [ -f "$LOG_FILE" ] && [ -O "$LOG_FILE" ] && [ "$(stat -c '%h' "$LOG_FILE")" = 1 ] ||
+            die "unsafe log file: $LOG_FILE"
+    fi
+    exec {log_fd}>>"$LOG_FILE" || die "cannot open history: $LOG_FILE"
+    chmod 600 "$LOG_FILE"
+    log_run_id="${EPOCHREALTIME}-$$"
+    log_event BEGIN "$action" "user=${SUDO_USER:-${USER:-unknown}}" "uid=${SUDO_UID:-$(id -u)}" ||
+        die "cannot write history: $LOG_FILE"
+    log_event PREFERENCES "ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK" \
+        "ALLOW_PRINTING=$ALLOW_PRINTING" "ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH" \
+        "UNTRUSTED_INTERFACES=${UNTRUSTED_INTERFACES[*]}"
+    log_event SCRIPT "$(sha256sum -- "${BASH_SOURCE[0]}")"
+    printf 'history     %s (run %s)\n' "$LOG_FILE" "$log_run_id"
+    # A real pipeline waits for the log writer. Keep errexit enabled inside the
+    # operation, and preserve its exit status instead of returning tee's status.
+    set +e
+    (
+        set -Ee
+        trap 'log_event ERROR "exit=$?" "line=$LINENO" "$BASH_COMMAND"' ERR
+        trap finish_action EXIT
+        trap 'exit 129' HUP
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        BASH_XTRACEFD=$log_fd
+        PS4='+ ${EPOCHREALTIME} run=${log_run_id} ${BASH_SOURCE##*/}:${LINENO}: '
+        set -x
+        run_action "$action"
+    ) 2>&1 | tee --output-error=warn -a "$LOG_FILE"
+    pipeline_status=( "${PIPESTATUS[@]}" )
+    set -e
+    result="${pipeline_status[0]}"
+    if [ "${pipeline_status[1]}" -ne 0 ]; then
+        printf 'error: history output failed; the operation may have made changes\n' >&2
+        if [ "$result" -eq 0 ]; then result=1; fi
+    fi
+    if ! log_event END "$action" "exit=$result" "output_exit=${pipeline_status[1]}"; then
+        printf 'error: could not finish history; the operation may have made changes\n' >&2
+        if [ "$result" -eq 0 ]; then result=1; fi
+    fi
+    exec {log_fd}>&-
+    log_fd=
+    return "$result"
 }
 
 legacy_file() {
@@ -86,6 +175,12 @@ owned_path() {
 
 atomic_install() {
     local source="$1" target="$2" mode="${3:-644}" staging
+    if [ -n "$log_fd" ]; then
+        log_event FILE_BEFORE "$target"
+        if [ -e "$target" ]; then cat -- "$target" >&"$log_fd"; else log_event ABSENT "$target"; fi
+        log_event FILE_REQUESTED "$target" "mode=$mode"
+        cat -- "$source" >&"$log_fd"
+    fi
     staging="$(mktemp "$target.tmp.XXXXXX")"
     if install -m "$mode" "$source" "$staging" && mv -fT "$staging" "$target"; then
         return 0
@@ -425,7 +520,7 @@ SETTINGS
 
 show_status() {
     local unit file state result=0
-    for unit in "$UNIT" "${PRINTING_UNITS[@]}" "${OTHER_UNITS[@]}"; do
+    for unit in "$UNIT" nftables.service "${PRINTING_UNITS[@]}" "${OTHER_UNITS[@]}"; do
         if state="$(systemctl show "$unit" -p LoadState -p ActiveState -p UnitFileState)"; then
             printf '%s\n%s\n\n' "$unit" "$state"
         else
@@ -447,11 +542,34 @@ show_status() {
     else
         echo "rules       run this command with sudo to inspect loaded filtering"
     fi
-    for file in /proc/sys/net/ipv4/conf/*/accept_redirects /proc/sys/net/ipv6/conf/*/accept_redirects; do
-        [ -r "$file" ] || continue
-        printf '%s=%s\n' "$file" "$(cat "$file")"
+    for file in /proc/sys/net/ipv4/conf/*/{accept_redirects,send_redirects,accept_source_route,rp_filter,log_martians} \
+                /proc/sys/net/ipv6/conf/*/{accept_redirects,accept_source_route}; do
+        [ -e "$file" ] || continue
+        if state="$(cat "$file")"; then
+            printf '%s=%s\n' "$file" "$state"
+        else
+            printf '%s: inspection failed\n' "$file" >&2
+            result=1
+        fi
     done
     return "$result"
+}
+
+run_action() {
+    local action="$1" command
+    for command in nft python3 systemctl mktemp flock install sysctl systemd-analyze; do
+        command -v "$command" >/dev/null || die "missing command: $command"
+    done
+    work="$(mktemp -d)"
+    exec 9>"$LOCK_FILE"
+    flock -n 9 || die "another firewall operation is running"
+    log_state_ready=yes
+    record_state before
+    case "$action" in
+        --enable) enable_firewall ;;
+        --disable) disable_firewall ;;
+        --harden) harden ;;
+    esac
 }
 
 main() {
@@ -462,24 +580,21 @@ main() {
         --enable|--disable|--status|--harden) ;;
         *) printf 'error: unknown action: %s\n\n' "$action" >&2; usage >&2; return 1 ;;
     esac
-    for command in nft python3 systemctl mktemp; do
-        command -v "$command" >/dev/null || die "missing command: $command (install nftables, python3, systemd)"
-    done
-    work="$(mktemp -d)"
-    trap 'rm -rf -- "$work"' EXIT
-    if [ "$action" = --status ]; then show_status; return; fi
+    if [ "$action" = --status ]; then
+        for command in nft python3 systemctl mktemp; do
+            command -v "$command" >/dev/null || die "missing command: $command (install nftables, python3, systemd)"
+        done
+        work="$(mktemp -d)"
+        trap 'rm -rf -- "$work"' EXIT
+        show_status
+        return
+    fi
     [ "$(id -u)" -eq 0 ] || die "run with sudo: sudo $0 $action"
-    for command in flock install sysctl systemd-analyze; do
+    for command in tee stat sha256sum; do
         command -v "$command" >/dev/null || die "missing command: $command"
     done
     umask 077
-    exec 9>"$LOCK_FILE"
-    flock -n 9 || die "another firewall operation is running"
-    case "$action" in
-        --enable) enable_firewall ;;
-        --disable) disable_firewall ;;
-        --harden) harden ;;
-    esac
+    run_logged "$action"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

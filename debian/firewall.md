@@ -3,6 +3,25 @@
 `firewall.sh` is optional and is not run by `run-all.sh`. It requires Debian 13,
 nftables, systemd, and Python 3. The package installer includes these dependencies.
 
+On a fresh machine, save a baseline before running `--enable` or `--harden`.
+From the repository root in a regular terminal:
+
+```sh
+./debian/firewall-snapshot.py --sudo
+```
+
+The collector only reads system state. It asks for sudo authentication to read
+live nftables rules and saves a new private directory under `.firewall-baselines/`
+(ignored by Git). It captures the original per-interface kernel values, service
+running and boot states, configuration files and symlinks, absent managed paths,
+and loaded module state. Earlier snapshots are never overwritten.
+
+The command prints the snapshot path and reports whether capture is complete.
+If it exits with status 2, check `manifest.json` for missing data before making
+changes. A failed ruleset inspection means unknown rules, not an empty firewall.
+This snapshot preserves evidence for recovery; `--disable` still removes only
+the firewall rules and does not automatically restore hardening.
+
 For a machine that has already run the old script:
 
 ```sh
@@ -58,6 +77,41 @@ and `--harden` to enable CUPS and discovery services.
 Hardening stops and disables unwanted services; a later administrator action,
 dependency, or activation mechanism may still start a disabled service.
 
+## Operation history
+
+Privileged `--enable`, `--disable`, and `--harden` invocations automatically append
+to a private log, starting with the first invocation of this version:
+
+```sh
+sudo less /var/log/untrusted-network-firewall/history.log
+```
+
+Each run records UTC start/end times, a run identifier, the invoking user,
+preferences, the script checksum, executed commands, console output and errors,
+and the final exit code. Before/after observations record service states, the
+managed live firewall table, and per-interface kernel settings. File replacements
+also record their previous contents (or absence) and requested contents. Failed
+observations are labeled incomplete; the log does not infer missing values.
+
+The directory is mode `0700` and the file is mode `0600`. History is appended,
+never truncated or removed by `--disable`; no automatic rotation discards older
+runs. If logging cannot be initialized, the operation stops before changing the
+firewall. A failure writing output makes the command return failure even if some
+changes already took effect. A run without an `END` entry may have been interrupted.
+Invalid arguments, missing logging dependencies, and calls without required sudo
+privileges are rejected before logging. Help and status do not write to the log.
+
+This records script operations, not individual network packets or changes made
+by other programs. Service activity at boot or through direct `systemctl` commands
+is available in the systemd journal (subject to its retention settings):
+
+```sh
+sudo journalctl -u untrusted-network-firewall.service
+```
+
+Keep the original baseline snapshot too: the operation log supplements it and
+does not implement automatic restoration of hardening.
+
 ## Migration and recovery
 
 The first `--enable` recognizes the old script's generated configuration.
@@ -112,8 +166,8 @@ python3 debian/tests/check_firewall_network.py
 ```
 
 The first command uses temporary files and simulated system tools to check
-migration, backup retention, repeated operation, and failure handling. It needs
-no privileges.
+migration, backup retention, repeated operation, persistent logging, and failure
+handling. It needs no privileges.
 
 The second command creates disposable user and network namespaces and sends
 real IPv4/IPv6 packets between test interfaces. It checks filtering, replies,
