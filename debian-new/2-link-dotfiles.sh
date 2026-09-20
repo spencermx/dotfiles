@@ -48,9 +48,11 @@ LINKS=(
     "$HOME/.local/bin/toolcheck    $HERE/bin/toolcheck"
     "$HOME/.local/share/man/man1/notes-tmux.1 $HERE/man/man1/notes-tmux.1"
 
-    # Claude Code. settings.json has hooks that run `aivim`, from your tools repo.
-    "$HOME/.claude/CLAUDE.md       $REPO/common/config/claude/CLAUDE.md"
-    "$HOME/.claude/settings.json   $REPO/common/config/claude/settings.json"
+    # Claude Code. LEFT OUT FOR NOW: linking settings.json replaces your current
+    # Claude settings, and its hooks run `aivim` (from your tools repo), which
+    # fails on every Claude event until aivim exists. Uncomment both when ready.
+    # "$HOME/.claude/CLAUDE.md       $REPO/common/config/claude/CLAUDE.md"
+    # "$HOME/.claude/settings.json   $REPO/common/config/claude/settings.json"
 )
 
 #---------------------------------------------------------------------------
