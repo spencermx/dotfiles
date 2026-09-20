@@ -49,16 +49,48 @@ bindsym $mod+7 workspace number 7
 bindsym $mod+8 workspace number 8
 bindsym $mod+9 workspace number 9
 bindsym $mod+0 workspace number 10
-bindsym $mod+Shift+1 move container to workspace number 1
-bindsym $mod+Shift+2 move container to workspace number 2
-bindsym $mod+Shift+3 move container to workspace number 3
-bindsym $mod+Shift+4 move container to workspace number 4
-bindsym $mod+Shift+5 move container to workspace number 5
-bindsym $mod+Shift+6 move container to workspace number 6
-bindsym $mod+Shift+7 move container to workspace number 7
-bindsym $mod+Shift+8 move container to workspace number 8
-bindsym $mod+Shift+9 move container to workspace number 9
-bindsym $mod+Shift+0 move container to workspace number 10
+
+# aivim: the same session keys as the Arch desktop.
+bindsym $mod+Shift+space exec $bin/aivim --popup pick
+bindsym $mod+Shift+n exec $bin/aivim --popup new
+bindsym $mod+Shift+c exec $bin/aivim --dup claude
+bindsym $mod+Shift+x exec $bin/aivim --dup codex
+bindsym $mod+Shift+t exec $bin/aivim --shell
+bindsym $mod+Shift+d exec $bin/aivim --kill
+bindsym $mod+Shift+a exec $bin/aivim --go need
+bindsym $mod+Shift+u exec $bin/aivim --last
+bindsym $mod+Shift+bracketleft exec $bin/aivim --go prev
+bindsym $mod+Shift+bracketright exec $bin/aivim --go next
+bindsym $mod+Shift+1 exec $bin/aivim --go 1
+bindsym $mod+Shift+2 exec $bin/aivim --go 2
+bindsym $mod+Shift+3 exec $bin/aivim --go 3
+bindsym $mod+Shift+4 exec $bin/aivim --go 4
+bindsym $mod+Shift+5 exec $bin/aivim --go 5
+bindsym $mod+Shift+6 exec $bin/aivim --go 6
+bindsym $mod+Shift+7 exec $bin/aivim --go 7
+bindsym $mod+Shift+8 exec $bin/aivim --go 8
+bindsym $mod+Shift+9 exec $bin/aivim --go 9
+bindsym $mod+Shift+0 exec $bin/aivim --go 0
+# Keep the picker roomy and the scratch shell close to fullscreen on any display.
+for_window [app_id="^aivim-picker$"] floating enable, resize set 65 ppt 75 ppt, move position center
+for_window [app_id="^aivim-shell$"] floating enable, resize set 95 ppt 90 ppt, move position center
+
+# Alt+M, then a number, moves a window to a workspace (as on Arch).
+bindsym $mod+m mode move
+mode move {
+    bindsym 1 move container to workspace number 1; mode default
+    bindsym 2 move container to workspace number 2; mode default
+    bindsym 3 move container to workspace number 3; mode default
+    bindsym 4 move container to workspace number 4; mode default
+    bindsym 5 move container to workspace number 5; mode default
+    bindsym 6 move container to workspace number 6; mode default
+    bindsym 7 move container to workspace number 7; mode default
+    bindsym 8 move container to workspace number 8; mode default
+    bindsym 9 move container to workspace number 9; mode default
+    bindsym 0 move container to workspace number 10; mode default
+    bindsym Escape mode default
+    bindsym Return mode default
+}
 
 # Same visible direction as the Arch preselect bindings: g below, v beside.
 bindsym $mod+g splitv
@@ -78,7 +110,7 @@ mode resize {
     bindsym Escape mode default
     bindsym Return mode default
 }
-bindsym $mod+Shift+c reload
+bindsym $mod+Control+Shift+c reload
 bindsym $mod+Shift+e exec $bin/desktop-control logout
 bindsym $mod+Control+l exec $bin/desktop-control lock
 bindsym $mod+Shift+p exec $bin/desktop-control menu

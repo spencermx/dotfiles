@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Step 3: download programs that do not come from Debian.
+# Step 3: download programs and fonts that do not come from Debian.
 #
 # Run as yourself, NOT as root:   ./3-download-programs.sh
 #
@@ -8,7 +8,7 @@
 # never brings newer code. A program only moves when you edit its three lines
 # below (version, url, sha256) and run this again.
 #
-# So far: Neovim, yazi, tree-sitter, Node, gh.
+# So far: Neovim, yazi, tree-sitter, Node, gh, JetBrainsMono Nerd Font.
 
 set -euo pipefail
 
@@ -121,4 +121,34 @@ else
     cp "$tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HOME/.local/bin/gh"
     chmod +x "$HOME/.local/bin/gh"
     echo "installed  gh $GH_VERSION"
+fi
+
+#---------------------------------------------------------------------------
+# JetBrainsMono Nerd Font: the same terminal font as Arch, including icons.
+# Release and checksum: https://github.com/ryanoasis/nerd-fonts/releases/tag/v3.5.1
+#---------------------------------------------------------------------------
+NERD_FONT_VERSION="3.5.1"    # released 2026-08-21
+NERD_FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz"
+NERD_FONT_SHA256="04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf"
+NERD_FONT_DIR="$HOME/.local/share/fonts/JetBrainsMonoNerdFont"
+NERD_FONT_FILES=(JetBrainsMonoNerdFont-{Regular,Bold,Italic,BoldItalic}.ttf)
+
+font_ready=true
+[ "$(cat "$NERD_FONT_DIR/.version" 2>/dev/null)" = "$NERD_FONT_VERSION" ] || font_ready=false
+for font in "${NERD_FONT_FILES[@]}"; do
+    [ -s "$NERD_FONT_DIR/$font" ] || font_ready=false
+done
+
+if "$font_ready"; then
+    echo "ok         JetBrainsMono Nerd Font $NERD_FONT_VERSION"
+else
+    download_checked "$NERD_FONT_URL" "$NERD_FONT_SHA256" "$tmp/nerd-font.tar.xz"
+    mkdir -p "$tmp/nerd-font" "$NERD_FONT_DIR"
+    tar -xJf "$tmp/nerd-font.tar.xz" -C "$tmp/nerd-font"
+    for font in "${NERD_FONT_FILES[@]}" OFL.txt; do
+        install -m 644 "$tmp/nerd-font/$font" "$NERD_FONT_DIR/$font"
+    done
+    fc-cache -f "$NERD_FONT_DIR"
+    printf '%s\n' "$NERD_FONT_VERSION" > "$NERD_FONT_DIR/.version"
+    echo "installed  JetBrainsMono Nerd Font $NERD_FONT_VERSION"
 fi

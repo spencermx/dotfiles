@@ -41,5 +41,6 @@ step "4-git-clones.sh";                ./4-git-clones.sh
 step "5-neovim-plugins.sh";            ./5-neovim-plugins.sh
 # Optional language servers are disabled; step 6's server list is commented out too.
 # step "6-language-servers.sh";        ./6-language-servers.sh
+step "7-setup-tools.sh";              ./7-setup-tools.sh
 
 printf '\nall steps finished.\n'
