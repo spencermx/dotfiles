@@ -8,6 +8,8 @@
 #   PACKAGES        the base machine: firmware, services, command-line tools
 #   SWAY_PACKAGES   the Sway desktop
 #
+# It then switches on automatic security updates.
+#
 # Everything here comes from Debian and is not pinned: Debian 13 freezes the
 # versions and only ships security patches for them.
 
@@ -78,3 +80,17 @@ apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 # and nothing changes.
 apt-get install -y --no-remove --no-install-recommends "${SWAY_PACKAGES[@]}"
 systemctl enable --now NetworkManager.service bluetooth.service
+
+#---------------------------------------------------------------------------
+# AUTOMATIC SECURITY UPDATES
+#
+# Installing unattended-upgrades is not enough. Debian only runs it each night
+# if this file says so; without it, nothing is ever updated automatically.
+# What gets installed is Debian's default choice: security updates only.
+#---------------------------------------------------------------------------
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+CONF
+chmod 644 /etc/apt/apt.conf.d/20auto-upgrades
+echo "automatic security updates: on"
