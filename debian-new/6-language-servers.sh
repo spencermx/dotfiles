@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Step 6: language servers (completion, go-to-definition, errors as you type).
+# Optional step 6: language servers (completion, go-to-definition, diagnostics).
+# Disabled by default: an empty SERVERS list skips this step without changes.
 #
 # Run as yourself, NOT as root:   ./6-language-servers.sh
 # Run steps 1 to 5 first. This needs nvim with its plugins, and node.
@@ -9,14 +10,26 @@
 # in SERVERS below and run this again. The npm packages underneath the servers
 # are frozen to NPM_FREEZE_DATE, also below.
 #
-# IMPORTANT: your nvim config lists these same six under `ensure_installed`
-# (common/config/nvim/lua/plugins/mason-lspconfig.lua). That setting installs
-# any server that is MISSING, at the NEWEST version, the first time you open a
-# file. Installing all six here first means it finds them present and does
-# nothing. If you delete a server from this list, delete it from that list too,
-# or it comes back unpinned.
+# To re-enable: review the versions and dependencies, uncomment the servers
+# you want below, and re-enable the plugins.mason-lspconfig import in
+# common/config/nvim/lua/plugins/init.lua. Before enabling that import, remove
+# unwanted servers from its ensure_installed list so they are not reinstalled.
 
 set -euo pipefail
+
+SERVERS=(
+    # "lua-language-server@3.19.1"          # Lua          released 2026-08-13
+    # "pyright@1.1.412"                     # Python       released 2026-08-12   (from npm)
+    # "bash-language-server@5.6.0"          # Bash         released 2025-04-13   (from npm)
+    # "omnisharp@v1.39.15"                  # C#           released 2025-11-14
+    # "rust-analyzer@2026-08-31"            # Rust         released 2026-08-31
+    # "typescript-language-server@6.0.0"    # TypeScript   released 2026-08-20   (from npm)
+)
+
+if [ ${#SERVERS[@]} -eq 0 ]; then
+    echo "skipped    language servers are disabled (SERVERS is empty)"
+    exit 0
+fi
 
 if [ "$(id -u)" -eq 0 ]; then
     echo "run this as yourself, not as root" >&2
@@ -25,15 +38,6 @@ fi
 
 # nvim, node and npm live here, and a fresh shell may not have it on PATH yet.
 export PATH="$HOME/.local/bin:$PATH"
-
-SERVERS=(
-    "lua-language-server@3.19.1"          # Lua          released 2026-08-13
-    "pyright@1.1.412"                     # Python       released 2026-08-12   (from npm)
-    "bash-language-server@5.6.0"          # Bash         released 2025-04-13   (from npm)
-    "omnisharp@v1.39.15"                  # C#           released 2025-11-14
-    "rust-analyzer@2026-08-31"            # Rust         released 2026-08-31
-    "typescript-language-server@6.0.0"    # TypeScript   released 2026-08-20   (from npm)
-)
 
 # Pinning a server does not pin the packages UNDERNEATH it: npm picks those on
 # install day, and bash-language-server alone brings 39 of them. This date

@@ -3,7 +3,8 @@ require("lazy").setup({
   { import = "plugins.telescope" },
   { import = "plugins.nvim-dap" },
   { import = "plugins.mason" },
-  { import = "plugins.mason-lspconfig" },
+  -- Language servers are optional; keep their setup and automatic installs disabled.
+  -- { import = "plugins.mason-lspconfig" },
   { import = "plugins.nvim-cmp" },
   { import = "plugins.undotree" },
   { import = "plugins.formatter" },
