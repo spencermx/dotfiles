@@ -256,7 +256,7 @@ trap 'rm -f "$tmp"' EXIT
 # a VPN may add later.
 cat > "$tmp" <<RULES
 #!/usr/sbin/nft -f
-# Written by debian-new/firewall.sh --enable
+# Written by debian/firewall.sh --enable
 
 table inet $TABLE
 delete table inet $TABLE
@@ -377,7 +377,7 @@ fi
 # --enable, step 2: kernel settings
 #---------------------------------------------------------------------------
 cat > "$SYSCTL_CONF" <<'SETTINGS'
-# Written by debian-new/firewall.sh --enable
+# Written by debian/firewall.sh --enable
 
 # Ignore ICMP redirects. Without this a device on the LAN can tell this
 # machine "route your traffic through me instead of the gateway".
@@ -418,7 +418,7 @@ echo "on          kernel settings: redirects ignored on every interface"
 # --enable, step 3: network protocols nothing here uses
 #---------------------------------------------------------------------------
 cat > "$MODULE_CONF" <<'MODULES'
-# Written by debian-new/firewall.sh --enable
+# Written by debian/firewall.sh --enable
 # Four networking protocols this machine has never used, each with a history
 # of remote kernel vulnerabilities. This stops them being auto-loaded on
 # demand. It does not unload an already-loaded module or affect anything

@@ -1,4 +1,4 @@
-Pre-installation software safety review of `debian-new`, 2026-09-19, at repository commit
+Pre-installation software safety review of `debian`, 2026-09-19, at repository commit
 `2577155a8a33db913f1250191bb1d766e6ba044f`.
 
 **Follow-up:** Neovim language servers have been disabled at the user's request.
