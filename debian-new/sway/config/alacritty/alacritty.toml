@@ -1,6 +1,6 @@
 # Arch's Nord Legible palette with a larger font for the laptop display.
 [font]
-size = 16
+size = 20
 normal = { family = "JetBrains Mono", style = "Regular" }
 
 [window]
