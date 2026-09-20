@@ -4,9 +4,12 @@
 No root, live services, kernel settings, or live packet filtering are touched.
 The separate network test uses real nftables in isolated network namespaces.
 """
+import fcntl
 import json
 import os
 from pathlib import Path
+import re
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -28,7 +31,7 @@ def save():
     state_file.write_text(json.dumps(state))
 def fail(message):
     print(message, file=sys.stderr)
-    sys.exit(1)
+    sys.exit(int(os.environ.get("FIREWALL_TEST_EXIT", "1")))
 def load_rules(path):
     text = pathlib.Path(path).read_text()
     owner = re.search(r'comment "(untrusted-network-firewall-v2)"', text)
@@ -127,13 +130,13 @@ class FirewallTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for directory in ("etc/systemd/system", "etc/sysctl.d", "etc/modprobe.d",
-                          "var/lib/untrusted-network-firewall", "run/lock", "bin", "tmp"):
+                          "var/lib/untrusted-network-firewall", "var/log", "run/lock", "bin", "tmp"):
             (self.root / directory).mkdir(parents=True, exist_ok=True)
         self.script = self.root / "firewall.sh"
         text = SOURCE.read_text()
         text = text.replace("export PATH=/usr/sbin:/usr/bin:/sbin:/bin",
                             f"export PATH={self.root}/bin:/usr/sbin:/usr/bin:/sbin:/bin")
-        for path in ("/etc/", "/var/lib/", "/run/lock/", "/proc/sys/", "/sys/module/"):
+        for path in ("/etc/", "/var/lib/", "/var/log/", "/run/lock/", "/proc/sys/", "/sys/module/"):
             text = text.replace(path, str(self.root) + path)
         self.script.write_text(text)
         stub = self.root / "bin/stub"
@@ -216,7 +219,8 @@ class FirewallTests(unittest.TestCase):
         self.run_script("--enable")
         self.run_script("--disable")
         self.assertIn("other_firewall", self.state()["tables"])
-        self.assertFalse(any(c[0] == "systemctl" and "nftables.service" in c for c in self.calls()))
+        self.assertFalse(any(c[0] == "systemctl" and c[1] != "show" and "nftables.service" in c
+                             for c in self.calls()))
         self.assertFalse(any(c[0] == "sysctl" for c in self.calls()))
 
     def test_legacy_disable_and_harden_require_safe_migration(self):
@@ -273,6 +277,9 @@ class FirewallTests(unittest.TestCase):
         before = self.state()
         self.run_script("--disable", success=False, FAIL_INSPECTION="1")
         self.assertEqual(self.state(), before)
+        history = (self.root / "var/log/untrusted-network-firewall/history.log").read_text()
+        self.assertIn("STATE_INCOMPLETE before", history)
+        self.assertIn("STATE_INCOMPLETE after", history)
         result = self.run_script("--status", success=False, FAIL_INSPECTION="1")
         self.assertIn("protection is unknown", result.stderr)
 
@@ -331,10 +338,110 @@ class FirewallTests(unittest.TestCase):
         self.assertIn("untrusted_network", self.state()["tables"])
 
     def test_status_is_read_only(self):
+        self.run_script("--status")
+        self.run_script("--help")
+        history = self.root / "var/log/untrusted-network-firewall/history.log"
+        self.assertFalse(history.parent.exists())
         self.run_script("--enable")
         before = self.state()
+        saved_history = history.read_bytes()
         self.run_script("--status")
+        self.run_script("--help")
         self.assertEqual(self.state(), before)
+        self.assertEqual(history.read_bytes(), saved_history)
+
+    def test_history_retains_actions_configurations_and_state_changes(self):
+        history = self.root / "var/log/untrusted-network-firewall/history.log"
+        self.run_script("--enable", SUDO_USER="spencer", SUDO_UID="1000")
+        initial = history.read_bytes()
+        self.run_script("--harden")
+        self.run_script("--disable")
+        text = history.read_text()
+        self.assertTrue(history.read_bytes().startswith(initial))
+        begins = re.findall(r"^\[.*\] run=(\S+) BEGIN (--\w+)", text, re.MULTILINE)
+        self.assertEqual([action for _, action in begins], ["--enable", "--harden", "--disable"])
+        self.assertEqual(len({run for run, _ in begins}), 3)
+        for run, action in begins:
+            self.assertRegex(text, re.escape(f"run={run} END {action} exit=0 output_exit=0"))
+        self.assertIn("user=spencer uid=1000", text)
+        self.assertIn("PREFERENCES ALLOW_LOCAL_NETWORK=no ALLOW_PRINTING=no ALLOW_BLUETOOTH=no", text)
+        self.assertIn("SCRIPT ", text)
+        self.assertIn("FILE_BEFORE ", text)
+        self.assertIn("FILE_REQUESTED ", text)
+        self.assertIn("policy drop;", text)
+        self.assertIn("ExecStart=", text)
+        self.assertIn("install sctp /bin/false", text)
+        key = str(self.root / "proc/sys/net/ipv4/conf/eth0/accept_redirects")
+        self.assertIn(key + "=1\n", text)
+        self.assertIn(key + "=0\n", text)
+        self.assertIn("off         this firewall only", text)
+        self.assertIn("STATE before", text)
+        self.assertIn("STATE after", text)
+        self.assertEqual(stat.S_IMODE(history.stat().st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(history.parent.stat().st_mode), 0o700)
+
+    def test_failed_command_is_logged_and_keeps_its_exit_status(self):
+        result = self.run_script("--enable", success=False, FAIL_RULE_CHECK="1", FIREWALL_TEST_EXIT="37")
+        self.assertEqual(result.returncode, 37)
+        text = (self.root / "var/log/untrusted-network-firewall/history.log").read_text()
+        self.assertIn("invalid rules\n", text)
+        self.assertIn("ERROR exit=37", text)
+        self.assertIn("END --enable exit=37 output_exit=0", text)
+        self.assertEqual(self.state(), self.original)
+        self.assertFalse((self.root / "etc/untrusted-network.nft").exists())
+
+    def test_refused_action_is_logged_without_mutation(self):
+        rules = self.root / "etc/untrusted-network.nft"
+        rules.write_text("# administrator file\n")
+        self.run_script("--enable", success=False)
+        text = (self.root / "var/log/untrusted-network-firewall/history.log").read_text()
+        self.assertIn("error: refusing to change a file not owned by this script", text)
+        self.assertIn("END --enable exit=1 output_exit=0", text)
+        self.assertEqual(self.state(), self.original)
+        self.assertEqual(rules.read_text(), "# administrator file\n")
+
+    def test_unavailable_log_prevents_changes(self):
+        location = self.root / "var/log/untrusted-network-firewall"
+        location.write_text("not a directory\n")
+        self.run_script("--enable", success=False)
+        self.assertEqual(self.state(), self.original)
+        self.assertFalse((self.root / "etc/untrusted-network.nft").exists())
+
+    def test_log_never_follows_symlinks_or_hardlinks(self):
+        directory = self.root / "var/log/untrusted-network-firewall"
+        directory.mkdir()
+        history = directory / "history.log"
+        unrelated = self.root / "unrelated.txt"
+        unrelated.write_text("preserve this\n")
+        for kind in ("symlink", "hardlink"):
+            with self.subTest(kind=kind):
+                if kind == "symlink":
+                    history.symlink_to(unrelated)
+                else:
+                    os.link(unrelated, history)
+                self.run_script("--enable", success=False)
+                self.assertEqual(unrelated.read_text(), "preserve this\n")
+                self.assertEqual(self.state(), self.original)
+                history.unlink()
+
+    def test_log_writer_failure_is_not_reported_as_success(self):
+        tee = self.root / "bin/tee"
+        tee.write_text("#!/bin/sh\ncat\nexit 23\n")
+        tee.chmod(0o755)
+        result = self.run_script("--disable", success=False)
+        self.assertIn("history output failed", result.stderr)
+        text = (self.root / "var/log/untrusted-network-firewall/history.log").read_text()
+        self.assertIn("END --disable exit=1 output_exit=23", text)
+        self.assertEqual(self.state(), self.original)
+
+    def test_busy_operation_is_logged_without_changing_state(self):
+        with (self.root / "run/lock/untrusted-network-firewall.lock").open("w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            self.run_script("--enable", success=False)
+        text = (self.root / "var/log/untrusted-network-firewall/history.log").read_text()
+        self.assertIn("another firewall operation is running", text)
+        self.assertIn("END --enable exit=1 output_exit=0", text)
+        self.assertEqual(self.state(), self.original)
 
     def test_extra_arguments_rejected_before_changes(self):
         self.run_script("--enable", "unexpected", success=False)
