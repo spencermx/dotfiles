@@ -16,6 +16,8 @@ old firewall first. Review the switches near the top before enabling features.
 
 ## Firewall controls
 
+- `-h` or `--help` explains the commands and shows the configured preferences.
+  It needs no sudo and makes no changes.
 - `--enable` checks the rules, loads them atomically, and enables the dedicated
   `untrusted-network-firewall.service` for boot. Repeat it after changing
   firewall preferences.

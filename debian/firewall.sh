@@ -5,6 +5,7 @@
 #   sudo ./firewall.sh --disable  remove ONLY this firewall's filtering
 #        ./firewall.sh --status   inspect configuration (sudo also shows rules)
 #   sudo ./firewall.sh --harden   separately apply kernel/module/service settings
+#        ./firewall.sh --help     explain commands and current preferences
 #
 # --disable does NOT undo hardening or start services. The old script never
 # saved enough information for an exact undo. Its original backups are retained.
@@ -45,6 +46,30 @@ OTHER_UNITS=( ModemManager.service bluetooth.service )
 work=
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+    cat <<HELP
+Usage: $0 OPTION
+
+  --enable   Load/update firewall rules and enable them at boot.
+  --disable  Remove only this firewall's rules.
+  --status   Show service states and kernel settings; sudo also shows live rules.
+  --harden   Apply persistent kernel/module restrictions and service preferences.
+  -h, --help Show this help without changing anything.
+
+Use sudo for --enable, --disable, and --harden.
+--disable leaves hardening and service settings in place.
+
+Preferences at the top of this script:
+  ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK
+  ALLOW_PRINTING=$ALLOW_PRINTING
+  ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH
+
+Run --enable after changing network or printing rules.
+Run --harden to apply printing, discovery, modem, and Bluetooth service settings.
+See firewall.md for details about protection, interface scope, and migration.
+HELP
+}
 
 legacy_file() {
     [ -f "$1" ] && grep -Eq '^# Written by debian(-new)?/firewall\.sh --enable$' "$1"
@@ -431,8 +456,12 @@ show_status() {
 
 main() {
     local action="${1:-}" command
-    [ "$#" -eq 1 ] || die "usage: $0 --enable | --disable | --status | --harden"
-    case "$action" in --enable|--disable|--status|--harden) ;; *) die "unknown action: $action" ;; esac
+    if [ "$#" -ne 1 ]; then usage >&2; return 1; fi
+    case "$action" in
+        -h|--help) usage; return 0 ;;
+        --enable|--disable|--status|--harden) ;;
+        *) printf 'error: unknown action: %s\n\n' "$action" >&2; usage >&2; return 1 ;;
+    esac
     for command in nft python3 systemctl mktemp; do
         command -v "$command" >/dev/null || die "missing command: $command (install nftables, python3, systemd)"
     done
