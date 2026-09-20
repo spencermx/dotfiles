@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every step in order, and stops at the first one that fails.
+# Runs every enabled step in order, and stops at the first one that fails.
 #
 # Run as yourself, NOT as root:   ./run-all.sh
 #
@@ -39,6 +39,7 @@ step "2-link-dotfiles.sh";             ./2-link-dotfiles.sh
 step "3-download-programs.sh";         ./3-download-programs.sh
 step "4-git-clones.sh";                ./4-git-clones.sh
 step "5-neovim-plugins.sh";            ./5-neovim-plugins.sh
-step "6-language-servers.sh";          ./6-language-servers.sh
+# Optional language servers are disabled; step 6's server list is commented out too.
+# step "6-language-servers.sh";        ./6-language-servers.sh
 
 printf '\nall steps finished.\n'
