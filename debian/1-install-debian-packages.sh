@@ -32,7 +32,7 @@ PACKAGES=(
     ca-certificates gnupg ripgrep fd-find fzf zoxide lsd tree less jq
     man-db manpages manpages-dev unzip zip xz-utils rsync file psmisc
     procps lsof strace htop ncdu bat brightnessctl brightness-udev acpi
-    python3-venv pipx cmake libfontconfig1
+    python3-venv pipx cmake libfontconfig1 rustup
 )
 
 #---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ SWAY_PACKAGES=(
     pipewire wireplumber xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk
 
     # apps and fonts
-    firefox-esr thunar fonts-jetbrains-mono fonts-dejavu-core fonts-font-awesome
+    firefox-esr thunar fontconfig fonts-jetbrains-mono fonts-dejavu-core fonts-font-awesome
 
     # network and bluetooth
     network-manager-applet nm-connection-editor
