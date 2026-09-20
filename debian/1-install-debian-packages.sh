@@ -9,7 +9,7 @@
 #   SWAY_PACKAGES      the Sway desktop
 #   RECOVERY_PACKAGES  virtualization and disk recovery tools
 #
-# It then switches on automatic security updates.
+# Service and system configuration belongs in firewall.sh --harden.
 #
 # Everything here comes from Debian and is not pinned: Debian 13 freezes the
 # versions and only ships security patches for them.
@@ -90,20 +90,5 @@ apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 # --no-remove: if installing the desktop would REMOVE anything, apt refuses
 # and nothing changes.
 apt-get install -y --no-remove --no-install-recommends "${SWAY_PACKAGES[@]}"
-systemctl enable --now NetworkManager.service bluetooth.service
 
 apt-get install -y --no-remove --no-install-recommends "${RECOVERY_PACKAGES[@]}"
-
-#---------------------------------------------------------------------------
-# AUTOMATIC SECURITY UPDATES
-#
-# Installing unattended-upgrades is not enough. Debian only runs it each night
-# if this file says so; without it, nothing is ever updated automatically.
-# What gets installed is Debian's default choice: security updates only.
-#---------------------------------------------------------------------------
-cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
-CONF
-chmod 644 /etc/apt/apt.conf.d/20auto-upgrades
-echo "automatic security updates: on"

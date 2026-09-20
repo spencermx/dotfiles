@@ -21,7 +21,7 @@
 
 ALLOW_LOCAL_NETWORK=no
 ALLOW_PRINTING=no
-ALLOW_BLUETOOTH=no
+ALLOW_BLUETOOTH=yes
 
 # Typical physical-interface names. Add custom names here.
 # VPNs and container bridges are excluded from outbound LAN blocking.
@@ -45,7 +45,7 @@ LOCK_FILE=/run/lock/untrusted-network-firewall.lock
 LOG_DIR=/var/log/untrusted-network-firewall
 LOG_FILE=$LOG_DIR/history.log
 PRINTING_UNITS=( cups.service cups.socket cups.path cups-browsed.service avahi-daemon.service avahi-daemon.socket )
-OTHER_UNITS=( ModemManager.service bluetooth.service )
+OTHER_UNITS=( NetworkManager.service ModemManager.service bluetooth.service )
 work=
 log_fd=
 log_run_id=
@@ -60,7 +60,7 @@ Usage: $0 OPTION
   --enable   Load/update firewall rules and enable them at boot.
   --disable  Remove only this firewall's rules.
   --status   Show service states and kernel settings; sudo also shows live rules.
-  --harden   Apply persistent kernel/module restrictions and service preferences.
+  --harden   Configure kernel/module restrictions, services, and automatic updates.
   -h, --help Show this help without changing anything.
 
 Use sudo for --enable, --disable, and --harden.
@@ -74,7 +74,7 @@ Preferences at the top of this script:
   ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH
 
 Run --enable after changing network or printing rules.
-Run --harden to apply printing, discovery, modem, and Bluetooth service settings.
+Run --harden to configure services and automatic security updates.
 See firewall.md for details about protection, interface scope, and migration.
 HELP
 }
@@ -503,6 +503,7 @@ SETTINGS
             printf 'present     %s remains in the running kernel; it was not unloaded\n' "$module"
         fi
     done
+    set_services enable NetworkManager.service
     if [ "$ALLOW_PRINTING" = yes ]; then
         set_services enable "${PRINTING_UNITS[@]}"
     else
@@ -511,9 +512,19 @@ SETTINGS
     set_services disable ModemManager.service
     if [ "$ALLOW_BLUETOOTH" = yes ]; then
         set_services enable bluetooth.service
+        # Apply now; Bluetooth apps or restarts can change these settings again.
+        bluetoothctl --timeout 10 pairable off
+        bluetoothctl --timeout 10 discoverable off
     else
         set_services disable bluetooth.service
     fi
+    # Installing unattended-upgrades alone does not enable scheduled updates.
+    cat > "$work/auto-upgrades" <<'CONF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+CONF
+    atomic_install "$work/auto-upgrades" /etc/apt/apt.conf.d/20auto-upgrades
+    echo "automatic security updates: on"
     echo "applied     persistent hardening; --disable will not undo these settings"
     echo "services    stopped/disabled services can still be activated explicitly"
 }

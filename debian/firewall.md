@@ -47,7 +47,9 @@ old firewall first. Review the switches near the top before enabling features.
 - `--status` reports service states and redirect settings. With sudo it also
   reads the actual rules. Failed inspection is reported as unknown.
 - `--harden` separately applies persistent kernel settings, module-loading
-  restrictions, and the printing/Bluetooth service preferences. These changes
+  restrictions, automatic security updates, NetworkManager startup, and the
+  printing/Bluetooth service preferences. The package installer only installs
+  packages; run `--harden` separately to apply this configuration. These changes
   remain when the firewall is disabled; this is deliberate, not an undo command.
 
 The default firewall blocks new inbound connections to the host on all
@@ -157,20 +159,3 @@ necessary control traffic, and public-address neighbors remain reachable
 outbound. It does not encrypt traffic, prevent malware from connecting to public
 addresses, or make a compromised router trustworthy. Use authenticated encrypted
 protocols and keep the operating system and applications updated.
-
-## Verification
-
-```sh
-python3 -m unittest discover -s debian/tests -v
-python3 debian/tests/check_firewall_network.py
-```
-
-The first command uses temporary files and simulated system tools to check
-migration, backup retention, repeated operation, persistent logging, and failure
-handling. It needs no privileges.
-
-The second command creates disposable user and network namespaces and sends
-real IPv4/IPv6 packets between test interfaces. It checks filtering, replies,
-printer discovery, container forwarding, tunnel interface scope, and preservation
-of unrelated tables. It needs permission to create user namespaces, but does not
-change the machine's live firewall or services.
