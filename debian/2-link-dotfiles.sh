@@ -9,14 +9,14 @@
 #   SWAY_LINKS   the Sway desktop's config and helper commands
 #
 # Each line in a list is:   <link in your home folder>   <file it points to>
-# Every file is inside this folder (debian-new/), except the ones shared with
+# Every file is inside this folder (debian/), except the ones shared with
 # your other machines, which stay in common/.
 # If something is already at the link path, it is moved to <name>.bak first.
 # Safe to run again: links that are already correct are left alone.
 
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # this folder, debian-new/
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # this folder, debian/
 REPO="$(dirname "$HERE")"                                   # the repo root, only for common/
 
 LINKS=(
