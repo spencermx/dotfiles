@@ -56,7 +56,7 @@ YAZI_VERSION="26.9.1"        # released 2026-09-01
 YAZI_URL="https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-x86_64-unknown-linux-gnu.zip"
 YAZI_SHA256="a02fe91d3304294048c681f010f1100856872a4e98ecf6927328e888d40a6ad2"
 
-if [ -x "$HOME/.local/bin/yazi" ] && "$HOME/.local/bin/yazi" --version | head -1 | grep -qF "Yazi $YAZI_VERSION "; then
+if [ -x "$HOME/.local/bin/yazi" ] && "$HOME/.local/bin/yazi" --version | grep -qF "Version: $YAZI_VERSION "; then
     echo "ok         yazi $YAZI_VERSION"
 else
     download_checked "$YAZI_URL" "$YAZI_SHA256" "$tmp/yazi.zip"
