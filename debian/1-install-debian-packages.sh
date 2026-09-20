@@ -21,7 +21,7 @@ PACKAGES=(
     firmware-amd-graphics
 
     # system services
-    unattended-upgrades systemd-timesyncd network-manager fwupd
+    unattended-upgrades systemd-timesyncd network-manager fwupd nftables
 
     # console
     console-setup kbd locales physlock
