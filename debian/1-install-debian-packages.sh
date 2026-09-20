@@ -3,10 +3,11 @@
 #
 # Run as root:   sudo ./1-install-debian-packages.sh
 #
-# Two lists, both always installed:
+# Three lists, all always installed:
 #
-#   PACKAGES        the base machine: firmware, services, command-line tools
-#   SWAY_PACKAGES   the Sway desktop
+#   PACKAGES           the base machine: firmware, services, command-line tools
+#   SWAY_PACKAGES      the Sway desktop
+#   RECOVERY_PACKAGES  virtualization and disk recovery tools
 #
 # It then switches on automatic security updates.
 #
@@ -67,6 +68,16 @@ SWAY_PACKAGES=(
     libnotify-bin
 )
 
+#---------------------------------------------------------------------------
+# VIRTUALIZATION / DISK RECOVERY
+#
+# Tools for inspecting disks through a small VM. Debian installs QEMU,
+# qemu-utils and supermin as dependencies.
+#---------------------------------------------------------------------------
+RECOVERY_PACKAGES=(
+    guestfish python3-guestfs
+)
+
 if [ "$(id -u)" -ne 0 ]; then
     echo "run this as root:  sudo $0" >&2
     exit 1
@@ -80,6 +91,8 @@ apt-get install -y --no-install-recommends "${PACKAGES[@]}"
 # and nothing changes.
 apt-get install -y --no-remove --no-install-recommends "${SWAY_PACKAGES[@]}"
 systemctl enable --now NetworkManager.service bluetooth.service
+
+apt-get install -y --no-remove --no-install-recommends "${RECOVERY_PACKAGES[@]}"
 
 #---------------------------------------------------------------------------
 # AUTOMATIC SECURITY UPDATES
