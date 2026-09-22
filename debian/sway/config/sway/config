@@ -53,6 +53,7 @@ bindsym $mod+0 workspace number 10
 # aivim: the same session keys as the Arch desktop.
 bindsym $mod+Shift+space exec $bin/aivim --popup pick
 bindsym $mod+Shift+n exec $bin/aivim --popup new
+bindsym $mod+Shift+s exec $bin/aivim --popup swarm
 bindsym $mod+Shift+c exec $bin/aivim --dup claude
 bindsym $mod+Shift+x exec $bin/aivim --dup codex
 bindsym $mod+Shift+t exec $bin/aivim --shell
