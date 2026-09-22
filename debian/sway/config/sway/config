@@ -135,5 +135,9 @@ bar {
 }
 exec $bin/desktop-session
 
-# Optional per-machine output/input settings, kept outside the repository.
+# Per-machine output/input settings: monitors, modes, scale, workspace
+# placement. 2-link-dotfiles.sh links this path to hosts/<hostname>.conf when
+# that machine has one; otherwise there is no file and sway skips the include.
+# Without it, outputs are auto-detected at scale 1.0, which on a HiDPI panel
+# makes the font sizes above render far too small. See hosts/deb.conf.
 include ~/.config/sway/local.conf
