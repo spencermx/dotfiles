@@ -1,7 +1,7 @@
 # Arch keyboard workflow on Debian. Mod1 is Alt.
 set $mod Mod1
 set $bin ~/.local/bin
-font pango:JetBrains Mono 12
+font pango:JetBrains Mono 11
 floating_modifier $mod normal
 default_border pixel 1
 default_floating_border pixel 1
