@@ -1,6 +1,7 @@
-# Arch's Nord Legible palette with a larger font for the laptop display.
+# Arch's Nord Legible palette. Font size assumes the compositor applies
+# HiDPI scaling (see ~/.config/sway/local.conf); do not inflate it here.
 [font]
-size = 16 
+size = 13
 normal = { family = "JetBrains Mono", style = "Regular" }
 
 [window]
