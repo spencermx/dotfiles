@@ -1,15 +1,19 @@
 # dotfiles
 
-Machine configuration for four operating systems, plus an optional Debian
-desktop profile. Each directory has its own setup script.
+Machine configuration for four operating systems. Each directory provisions
+its own machine.
 
 ```
 archlinux/  Arch     ./setup.sh
-debian/     Debian   ./setup.sh    text-only ThinkPad; see debian/README.md
-debian-desktop/ Debian ./setup.sh  Sway desktop overlay; keeps Xfce available
+debian/     Debian   ./run-all.sh  ThinkPad console profile and the Sway desktop
 mac/        macOS    ./setup.sh
 windows/    Windows  .\setup.ps1
 ```
+
+`debian/` is provisioned by numbered scripts run in order, or by `./run-all.sh`
+which runs them all and stops at the first failure. It has no `setup.sh`. It
+absorbed the former `debian-desktop/` overlay, so the Sway desktop lives in
+`debian/sway/` rather than in a zone of its own.
 
 ## Getting a machine up
 
@@ -20,9 +24,10 @@ git clone https://github.com/spencermx/dotfiles.git ~/source/repos/dotfiles
 
 cd ~/source/repos/dotfiles/mac    && ./setup.sh --dry-run && ./setup.sh
 cd ~/source/repos/dotfiles/archlinux  && ./setup.sh --dry-run && ./setup.sh
-cd ~/source/repos/dotfiles/debian     && ./setup.sh --dry-run && ./setup.sh
-# For a Debian desktop (separate from the console-only profile):
-cd ~/source/repos/dotfiles/debian-desktop && ./setup.sh --dry-run && ./setup.sh
+
+# Debian takes no --dry-run. On a new machine run the numbered scripts one at
+# a time so you see each result; after that, run-all.sh does the lot.
+cd ~/source/repos/dotfiles/debian     && ./run-all.sh
 ```
 
 ```powershell
@@ -53,13 +58,15 @@ they share a shape, and reading one teaches you the others:
 | phases | `packages` `links` `services` `tools` | see below | `packages` `paths` `links` `defaults` `tools` | `Packages` `Env` `Path` `Links` |
 
 `debian/` is the odd one out and breaks two of the rules above deliberately: it
-has no display server, and it is provisioned once behind a one-way gate after
-which `sudo` is purged, so "re-runnable" applies only to the phases that need
-no root. Read [debian/README.md](debian/README.md) before touching it.
+has no display server in its console profile, and it is provisioned once behind
+a one-way gate after which `sudo` is purged, so "re-runnable" applies only to
+the phases that need no root. That gate is a manual procedure walked with
+`bin/gatecheck`, not something the numbered scripts apply; hardening likewise
+lives in `firewall.sh --harden`, which `run-all.sh` does not call.
 
-`debian-desktop/` adds Sway to an existing Debian 13 desktop. It installs and
-updates only its desktop packages and dependencies, preserves other desktop
-sessions, and does not apply the console-only profile's hardening gate.
+The same zone also carries the Sway desktop in `debian/sway/`, linked by
+`2-link-dotfiles.sh`. It preserves other desktop sessions, and installing it
+does not close the gate or harden anything.
 
 ## The zones are independent, except for `common/`
 
@@ -99,14 +106,13 @@ editor.
 
 ## Per-OS reference
 
-Each directory has its own README covering the parts that do not generalise:
+Most directories have a README covering the parts that do not generalise:
 
 - [archlinux/README.md](archlinux/README.md) — how seven install scripts became
   one `setup.sh`, and the health check that keeps it honest
-- [debian/README.md](debian/README.md) — a console-only ThinkPad with no X or
-  Wayland, and the ordered gate that ends in `sudo` being purged
-- [debian-desktop/README.md](debian-desktop/README.md) — Sway with the Arch
-  Alt keymap, automatic tiling, Waybar and a readable Alacritty terminal
+- `debian/` has no README yet. Its numbered scripts carry the detail: the
+  ordered gate that ends in `sudo` being purged, and the Sway desktop with the
+  Arch Alt keymap, automatic tiling, Waybar and Alacritty.
 - [mac/README.md](mac/README.md) — Karabiner and AeroSpace are one keymap split
   across two programs, and the PATH ordering that Homebrew requires
 - [windows/README.md](windows/README.md) — why Visual Studio is excluded from

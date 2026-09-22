@@ -1,11 +1,15 @@
 # dotfiles
 
-Four OS zones — `archlinux/`, `debian/`, `mac/`, `windows/` — and a separate
-`debian-desktop/` Sway overlay in one repository, each with its own setup script.
-The desktop overlay adds a graphical session to an existing Debian desktop;
-it must not apply the console-only `debian/` hardening gate.
-[README.md](README.md) and the per-zone READMEs are current; read the relevant
-one before changing how a setup script works.
+Four OS zones — `archlinux/`, `debian/`, `mac/`, `windows/` — in one repository.
+Three of them are provisioned by a single `./setup.sh`. `debian/` is not: it
+absorbed the separate `debian-desktop/` Sway overlay in 7510fe1 and was renamed
+from `debian-new/` in 9e4a80a, so one zone now covers both the console-only
+ThinkPad and the Sway desktop, provisioned by the numbered scripts in order or
+by `./run-all.sh`. There is no `debian/setup.sh` and no `--dry-run`.
+
+[README.md](README.md) is the overview. `archlinux/`, `mac/` and `windows/`
+have their own READMEs; `debian/` does not, so read its numbered scripts before
+changing how it is provisioned.
 
 ## The zones share only `common/`
 
