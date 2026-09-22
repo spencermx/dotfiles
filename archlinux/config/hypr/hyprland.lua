@@ -249,6 +249,7 @@ local aivim = "$HOME/.local/bin/aivim"
 hl.bind(mainMod .. " + SHIFT_L",       hl.dsp.exec_cmd(aivim .. " --popup pick"), { release = true })
 hl.bind(mainMod .. " + SHIFT + space", hl.dsp.exec_cmd(aivim .. " --popup pick"))
 hl.bind(mainMod .. " + SHIFT + n",     hl.dsp.exec_cmd(aivim .. " --popup new"))
+hl.bind(mainMod .. " + SHIFT + s",     hl.dsp.exec_cmd(aivim .. " --popup swarm"))
 hl.bind(mainMod .. " + SHIFT + c",     hl.dsp.exec_cmd(aivim .. " --dup claude"))
 hl.bind(mainMod .. " + SHIFT + x",     hl.dsp.exec_cmd(aivim .. " --dup codex"))
 hl.bind(mainMod .. " + SHIFT + t",     hl.dsp.exec_cmd(aivim .. " --dup shell"))
