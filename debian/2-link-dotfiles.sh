@@ -6,7 +6,9 @@
 # Two lists, both always linked:
 #
 #   LINKS        shell, git, tmux, editors, your helper commands, Claude Code
-#   SWAY_LINKS   the Sway desktop's config and helper commands
+#   SWAY_LINKS   the Sway desktop's config and helper commands, plus this
+#                machine's monitor layout from sway/config/sway/hosts/ if
+#                a file there matches the hostname
 #
 # Each line in a list is:   <link in your home folder>   <file it points to>
 # Every file is inside this folder (debian/), except the ones shared with
@@ -81,6 +83,22 @@ SWAY_LINKS=(
     "$HOME/.local/bin/desktop-screenshot              $HERE/sway/bin/desktop-screenshot"        # Print key
     "$HOME/.local/bin/desktop-swap                    $HERE/sway/bin/desktop-swap"              # Alt+S swap two windows
 )
+
+# Per-machine output settings: monitors, modes, scale, workspace placement.
+# sway/config ends with `include ~/.config/sway/local.conf`; this points that
+# path at the file in sway/config/sway/hosts/ named after this machine.
+#
+# It is appended only when the file exists, because link_all treats a missing
+# target as a fatal error. A machine with no file in hosts/ therefore gets no
+# link, sway finds nothing to include, and both fall back to auto-detected
+# outputs -- so this step still completes on a machine set up for the first
+# time. Add hosts/<hostname>.conf to give that machine a fixed layout.
+HOST_OUTPUTS="$HERE/sway/config/sway/hosts/$(hostname -s).conf"
+if [ -e "$HOST_OUTPUTS" ]; then
+    SWAY_LINKS+=("$HOME/.config/sway/local.conf  $HOST_OUTPUTS")
+else
+    echo "note    no per-machine output config at $HOST_OUTPUTS, skipping"
+fi
 
 if [ "$(id -u)" -eq 0 ]; then
     echo "run this as yourself, not as root" >&2
