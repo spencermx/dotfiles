@@ -10,8 +10,9 @@ mac/        macOS    ./setup.sh
 windows/    Windows  .\setup.ps1
 ```
 
-`debian/` is provisioned by numbered scripts run in order, or by `./run-all.sh`
-which runs them all and stops at the first failure. It has no `setup.sh`. It
+`debian/` is provisioned by `./run-all.sh`, which runs the enabled numbered
+scripts in order and stops at the first failure. It installs Aivim before
+activating the Claude configuration that depends on it. It has no `setup.sh`. It
 absorbed the former `debian-desktop/` overlay, so the Sway desktop lives in
 `debian/sway/` rather than in a zone of its own.
 
@@ -25,8 +26,8 @@ git clone https://github.com/spencermx/dotfiles.git ~/source/repos/dotfiles
 cd ~/source/repos/dotfiles/mac    && ./setup.sh --dry-run && ./setup.sh
 cd ~/source/repos/dotfiles/archlinux  && ./setup.sh --dry-run && ./setup.sh
 
-# Debian takes no --dry-run. On a new machine run the numbered scripts one at
-# a time so you see each result; after that, run-all.sh does the lot.
+# Debian: run as yourself. The script asks for root for package installation.
+# It takes no options, including --dry-run.
 cd ~/source/repos/dotfiles/debian     && ./run-all.sh
 ```
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and configure your tools, then apply the Sway desktop configuration.
+# Install Aivim, activate the Claude configuration, then apply Sway settings.
 # Run as yourself: ./7-setup-tools.sh
 # Also runs as part of ./run-all.sh; step 1 supplies rustup and build tools.
 
@@ -15,7 +15,7 @@ REPOS="$(dirname "$(dirname "$HERE")")"
 TOOLS_REPO="${TOOLS_REPO:-$REPOS/tools}"
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
-# Pin the compiler as well as the Cargo.lock used by tools/install.sh.
+# Pin the compiler and use Aivim's Cargo.lock when building below.
 RUST_VERSION="1.98.1"
 if ! command -v rustup >/dev/null; then
     echo "rustup is missing; run 1-install-debian-packages.sh first" >&2
@@ -30,16 +30,47 @@ fi
 if [ ! -e "$TOOLS_REPO" ]; then
     git clone https://github.com/spencermx/tools.git "$TOOLS_REPO"
 fi
-if [ ! -x "$TOOLS_REPO/install.sh" ]; then
-    echo "missing tools installer: $TOOLS_REPO/install.sh" >&2
+if [ ! -f "$TOOLS_REPO/aivim/Cargo.toml" ]; then
+    echo "missing Aivim source: $TOOLS_REPO/aivim/Cargo.toml" >&2
     exit 1
 fi
-RUSTUP_TOOLCHAIN="$RUST_VERSION" "$TOOLS_REPO/install.sh" aivim
-"$TOOLS_REPO/install.sh" --check
+
+# Build separately from configuration: tools/install.sh combines both, which
+# would change the old Claude settings before step 2 can back them up.
+# Install where the shared Claude settings expect the executable.
+rustup run "$RUST_VERSION" cargo install --locked --force \
+    --path "$TOOLS_REPO/aivim" --root "$HOME/.local"
+
+# Activate the dotfiles only after the build succeeds, then configure Aivim
+# against those final settings. Step 2 backs up any files it replaces.
+"$HERE/2-link-dotfiles.sh" --claude
+"$HOME/.local/bin/aivim" --install
+
+# Check the settings actually used by Claude, including every expected hook.
+if ! jq -e '
+    . as $settings |
+    ($settings.statusLine.type == "command") and
+    ($settings.statusLine.command == "~/.local/bin/aivim --statusline") and
+    all(["UserPromptSubmit", "Stop", "Notification", "SessionStart", "SessionEnd"][];
+        . as $event |
+        [$settings.hooks[$event][]?.hooks[]? |
+            select(.type == "command" and .command == "~/.local/bin/aivim --hook")]
+        | length == 1)
+' "$HOME/.claude/settings.json" >/dev/null; then
+    echo "Claude's Aivim hooks or status line are not configured correctly." >&2
+    exit 1
+fi
 
 for timer in aivim-sweep.timer aivim-usage.timer; do
-    systemctl --user is-enabled --quiet "$timer"
-    systemctl --user is-active --quiet "$timer"
+    if ! systemctl --user is-enabled --quiet "$timer" ||
+        ! systemctl --user is-active --quiet "$timer"; then
+        echo "$timer must be enabled and active; check the systemd user session." >&2
+        exit 1
+    fi
+    case "$(systemctl --user show --property=SubState --value "$timer")" in
+        waiting|running) ;;
+        *) echo "$timer has no scheduled run; Aivim setup is incomplete." >&2; exit 1 ;;
+    esac
 done
 
 # The config is linked by step 2. Reloading applies bindings and window rules
@@ -48,4 +79,4 @@ if [ -n "${SWAYSOCK:-}" ]; then
     sway --validate --config "$HOME/.config/sway/config"
     swaymsg reload >/dev/null
 fi
-echo "ok         aivim installed, hooks configured, timers enabled"
+echo "ok         aivim installed, Claude config linked, hooks verified, timers scheduled"

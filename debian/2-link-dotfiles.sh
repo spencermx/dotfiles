@@ -3,9 +3,9 @@
 #
 # Run as yourself, NOT as root:   ./2-link-dotfiles.sh
 #
-# Two lists, both always linked:
+# By default, link these two lists:
 #
-#   LINKS        shell, git, tmux, editors, your helper commands, Claude Code
+#   LINKS        shell, git, tmux, editors, your helper commands
 #   SWAY_LINKS   the Sway desktop's config and helper commands, plus this
 #                machine's monitor layout from sway/config/sway/hosts/ if
 #                a file there matches the hostname
@@ -15,8 +15,21 @@
 # your other machines, which stay in common/.
 # If something is already at the link path, it is moved to <name>.bak first.
 # Safe to run again: links that are already correct are left alone.
+#
+# Claude Code is linked separately with --claude after Aivim is installed.
+# Step 7 calls that automatically; run-all.sh handles the complete sequence.
 
 set -euo pipefail
+
+if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != "--claude" ]; }; then
+    echo "usage: ./2-link-dotfiles.sh [--claude]" >&2
+    exit 2
+fi
+
+if [ "$(id -u)" -eq 0 ]; then
+    echo "run this as yourself, not as root" >&2
+    exit 1
+fi
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"      # this folder, debian/
 REPO="$(dirname "$HERE")"                                   # the repo root, only for common/
@@ -49,12 +62,6 @@ LINKS=(
     "$HOME/.local/bin/diskreport   $HERE/bin/diskreport"
     "$HOME/.local/bin/toolcheck    $HERE/bin/toolcheck"
     "$HOME/.local/share/man/man1/notes-tmux.1 $HERE/man/man1/notes-tmux.1"
-
-    # Claude Code. LEFT OUT FOR NOW: linking settings.json replaces your current
-    # Claude settings, and its hooks run `aivim` (from your tools repo), which
-    # fails on every Claude event until aivim exists. Uncomment both when ready.
-    # "$HOME/.claude/CLAUDE.md       $REPO/common/config/claude/CLAUDE.md"
-    # "$HOME/.claude/settings.json   $REPO/common/config/claude/settings.json"
 )
 
 #---------------------------------------------------------------------------
@@ -84,27 +91,6 @@ SWAY_LINKS=(
     "$HOME/.local/bin/desktop-swap                    $HERE/sway/bin/desktop-swap"              # Alt+S swap two windows
 )
 
-# Per-machine output settings: monitors, modes, scale, workspace placement.
-# sway/config ends with `include ~/.config/sway/local.conf`; this points that
-# path at the file in sway/config/sway/hosts/ named after this machine.
-#
-# It is appended only when the file exists, because link_all treats a missing
-# target as a fatal error. A machine with no file in hosts/ therefore gets no
-# link, sway finds nothing to include, and both fall back to auto-detected
-# outputs -- so this step still completes on a machine set up for the first
-# time. Add hosts/<hostname>.conf to give that machine a fixed layout.
-HOST_OUTPUTS="$HERE/sway/config/sway/hosts/$(hostname -s).conf"
-if [ -e "$HOST_OUTPUTS" ]; then
-    SWAY_LINKS+=("$HOME/.config/sway/local.conf  $HOST_OUTPUTS")
-else
-    echo "note    no per-machine output config at $HOST_OUTPUTS, skipping"
-fi
-
-if [ "$(id -u)" -eq 0 ]; then
-    echo "run this as yourself, not as root" >&2
-    exit 1
-fi
-
 # link_all <list...>: make every link in the list.
 link_all() {
     local pair link target
@@ -126,7 +112,7 @@ link_all() {
         if [ -L "$link" ]; then
             rm "$link"
         elif [ -e "$link" ]; then
-            if [ -e "$link.bak" ]; then
+            if [ -e "$link.bak" ] || [ -L "$link.bak" ]; then
                 echo "stopping: $link.bak already exists, move it out of the way first" >&2
                 exit 1
             fi
@@ -139,5 +125,28 @@ link_all() {
     done
 }
 
-link_all "${LINKS[@]}"
-link_all "${SWAY_LINKS[@]}"
+if [ "${1:-}" = "--claude" ]; then
+    if [ ! -x "$HOME/.local/bin/aivim" ]; then
+        echo "Aivim is missing; run ./run-all.sh to install it before linking Claude settings." >&2
+        exit 1
+    fi
+    if ! jq -e 'type == "object"' "$REPO/common/config/claude/settings.json" >/dev/null; then
+        echo "Claude settings in the repo must be a valid JSON object." >&2
+        exit 1
+    fi
+    link_all \
+        "$HOME/.claude/CLAUDE.md       $REPO/common/config/claude/CLAUDE.md" \
+        "$HOME/.claude/settings.json   $REPO/common/config/claude/settings.json"
+else
+    # Per-machine output settings: monitors, modes, scale, workspace placement.
+    # Sway includes ~/.config/sway/local.conf, linked here only when this host
+    # has a file. Otherwise Sway keeps its automatically detected outputs.
+    HOST_OUTPUTS="$HERE/sway/config/sway/hosts/$(hostname -s).conf"
+    if [ -e "$HOST_OUTPUTS" ]; then
+        SWAY_LINKS+=("$HOME/.config/sway/local.conf  $HOST_OUTPUTS")
+    else
+        echo "note    no per-machine output config at $HOST_OUTPUTS, skipping"
+    fi
+    link_all "${LINKS[@]}"
+    link_all "${SWAY_LINKS[@]}"
+fi
