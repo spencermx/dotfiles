@@ -4,11 +4,11 @@
 # Run as yourself, NOT as root:   ./run-all.sh
 #
 # It asks for your password for step 1, which needs root, and runs the rest as
-# you. Every step is safe to run again, so after fixing a failure just run this
-# again: finished steps report "ok" and are skipped.
+# you. Steps reuse installed components where possible; after fixing a failure,
+# run this again to finish setup.
 #
-# The first time on a new kind of machine, run the numbered files one at a
-# time instead, so you see each result before the next step builds on it.
+# Step 2 links desktop/editor settings. Step 7 installs Aivim before activating
+# the Claude settings that call it, verifies its integrations, and reloads Sway.
 
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
