@@ -22,6 +22,7 @@
 ALLOW_LOCAL_NETWORK=no
 ALLOW_PRINTING=no
 ALLOW_BLUETOOTH=yes
+ALLOW_TAILSCALE_RDP=yes
 
 # Typical physical-interface names. Add custom names here.
 # VPNs and container bridges are excluded from outbound LAN blocking.
@@ -72,6 +73,7 @@ Preferences at the top of this script:
   ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK
   ALLOW_PRINTING=$ALLOW_PRINTING
   ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH
+  ALLOW_TAILSCALE_RDP=$ALLOW_TAILSCALE_RDP
 
 Run --enable after changing network or printing rules.
 Run --harden to configure services and automatic security updates.
@@ -126,6 +128,7 @@ run_logged() {
         die "cannot write history: $LOG_FILE"
     log_event PREFERENCES "ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK" \
         "ALLOW_PRINTING=$ALLOW_PRINTING" "ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH" \
+        "ALLOW_TAILSCALE_RDP=$ALLOW_TAILSCALE_RDP" \
         "UNTRUSTED_INTERFACES=${UNTRUSTED_INTERFACES[*]}"
     log_event SCRIPT "$(sha256sum -- "${BASH_SOURCE[0]}")"
     printf 'history     %s (run %s)\n' "$LOG_FILE" "$log_run_id"
@@ -191,7 +194,7 @@ atomic_install() {
 
 validate_choices() {
     local v name
-    for v in ALLOW_LOCAL_NETWORK ALLOW_PRINTING ALLOW_BLUETOOTH; do
+    for v in ALLOW_LOCAL_NETWORK ALLOW_PRINTING ALLOW_BLUETOOTH ALLOW_TAILSCALE_RDP; do
         case "${!v}" in yes|no) ;; *) die "$v must be yes or no" ;; esac
     done
     [ "${#UNTRUSTED_INTERFACES[@]}" -gt 0 ] || die "UNTRUSTED_INTERFACES is empty"
@@ -238,6 +241,9 @@ table inet $TABLE {
 RULES
     if [ "$ALLOW_PRINTING" = yes ]; then
         echo "        iifname { $interfaces } udp sport 5353 udp dport 5353 accept"
+    fi
+    if [ "$ALLOW_TAILSCALE_RDP" = yes ]; then
+        echo '        iifname "tailscale0" tcp dport 3389 accept'
     fi
     cat <<RULES
         counter comment "unsolicited input"
