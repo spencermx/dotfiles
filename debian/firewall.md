@@ -75,6 +75,10 @@ TCP ports 515, 631, and 9100. Other local-network restrictions remain. These are
 port exceptions, not a trusted-printer allowlist. Run `--enable` to update rules
 and `--harden` to enable CUPS and discovery services.
 
+`ALLOW_TAILSCALE_RDP=yes` accepts inbound TCP 3389 on `tailscale0` only, so
+GNOME Remote Desktop is reachable from devices on your tailnet and nowhere else.
+The Wi-Fi and Ethernet interfaces stay closed. Run `--enable` to update rules.
+
 `ALLOW_BLUETOOTH` affects only `--harden`. Bluetooth is not filtered by nftables.
 Hardening stops and disables unwanted services; a later administrator action,
 dependency, or activation mechanism may still start a disabled service.
