@@ -11,3 +11,11 @@ anchor=top-right
 [urgency=critical]
 default-timeout=0
 border-color=#bf616a
+# BEGIN aivim monitor notifications
+[app-name=aivim category=aivim-monitor-DP-2]
+output=DP-2
+layer=overlay
+[app-name=aivim category=aivim-monitor-HDMI-A-1]
+output=HDMI-A-1
+layer=overlay
+# END aivim monitor notifications
