@@ -52,3 +52,13 @@ Before staging, compare `git diff --stat` against
 files as CRLF and a ~100-line change is about to land as a whole-file diff.
 Convert back before committing. `dotfiles` is protected by `.gitattributes`;
 `drift2` has none and `core.autocrlf=false`, so nothing there catches it.
+
+## Quest development
+
+For Meta Quest headset build, deployment or connection work in any app project,
+read the [shared machine guide](~/.local/share/quest/README.md) at
+`~/.local/share/quest/README.md` if it exists. Use its verified Wi-Fi ADB workflow
+and shared connection record before requesting USB setup again. Select the
+headset explicitly and verify its identity; build and install the current
+project's own APK. The guide is machine-local, so inspect the environment when
+it is absent rather than assuming another computer has the same setup.
