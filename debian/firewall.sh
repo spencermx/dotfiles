@@ -23,6 +23,7 @@ ALLOW_LOCAL_NETWORK=no
 ALLOW_PRINTING=no
 ALLOW_BLUETOOTH=yes
 ALLOW_TAILSCALE_RDP=yes
+ALLOW_LAN_SSH=yes
 
 # Typical physical-interface names. Add custom names here.
 # VPNs and container bridges are excluded from outbound LAN blocking.
@@ -74,6 +75,7 @@ Preferences at the top of this script:
   ALLOW_PRINTING=$ALLOW_PRINTING
   ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH
   ALLOW_TAILSCALE_RDP=$ALLOW_TAILSCALE_RDP
+  ALLOW_LAN_SSH=$ALLOW_LAN_SSH
 
 Run --enable after changing network or printing rules.
 Run --harden to configure services and automatic security updates.
@@ -128,7 +130,7 @@ run_logged() {
         die "cannot write history: $LOG_FILE"
     log_event PREFERENCES "ALLOW_LOCAL_NETWORK=$ALLOW_LOCAL_NETWORK" \
         "ALLOW_PRINTING=$ALLOW_PRINTING" "ALLOW_BLUETOOTH=$ALLOW_BLUETOOTH" \
-        "ALLOW_TAILSCALE_RDP=$ALLOW_TAILSCALE_RDP" \
+        "ALLOW_TAILSCALE_RDP=$ALLOW_TAILSCALE_RDP" "ALLOW_LAN_SSH=$ALLOW_LAN_SSH" \
         "UNTRUSTED_INTERFACES=${UNTRUSTED_INTERFACES[*]}"
     log_event SCRIPT "$(sha256sum -- "${BASH_SOURCE[0]}")"
     printf 'history     %s (run %s)\n' "$LOG_FILE" "$log_run_id"
@@ -194,7 +196,7 @@ atomic_install() {
 
 validate_choices() {
     local v name
-    for v in ALLOW_LOCAL_NETWORK ALLOW_PRINTING ALLOW_BLUETOOTH ALLOW_TAILSCALE_RDP; do
+    for v in ALLOW_LOCAL_NETWORK ALLOW_PRINTING ALLOW_BLUETOOTH ALLOW_TAILSCALE_RDP ALLOW_LAN_SSH; do
         case "${!v}" in yes|no) ;; *) die "$v must be yes or no" ;; esac
     done
     [ "${#UNTRUSTED_INTERFACES[@]}" -gt 0 ] || die "UNTRUSTED_INTERFACES is empty"
@@ -245,6 +247,9 @@ RULES
     if [ "$ALLOW_TAILSCALE_RDP" = yes ]; then
         echo '        iifname "tailscale0" tcp dport 3389 accept'
     fi
+    if [ "$ALLOW_LAN_SSH" = yes ]; then
+        echo "        iifname { $interfaces } ip saddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } tcp dport 22 accept"
+    fi
     cat <<RULES
         counter comment "unsolicited input"
     }
@@ -278,6 +283,14 @@ RULES
         ip daddr 224.0.0.251 udp dport 5353 accept
         ip6 daddr ff02::fb udp dport 5353 accept
         tcp dport { 515, 631, 9100 } accept
+RULES
+    fi
+    if [ "$ALLOW_LAN_SSH" = yes ]; then
+        cat <<'RULES'
+        # SSH with the local network: replies to the sessions let in above,
+        # and sessions this machine opens.
+        tcp sport 22 ct state established accept
+        tcp dport 22 accept
 RULES
     fi
     cat <<'RULES'
