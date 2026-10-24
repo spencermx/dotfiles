@@ -9,7 +9,7 @@ vim.opt.number = true -- Show line numbers.
 vim.opt.relativenumber = true -- Show relative line numbers (useful for quickly navigating with line-based motions like `5j` or `5k`).
 vim.opt.splitbelow = true -- Open horizontal splits below the current window.
 vim.opt.splitright = true -- Open vertical splits to the right of the current window.
-vim.opt.wrap = true -- Disable line wrapping (long lines will not break automatically).
+vim.opt.wrap = false -- Disable line wrapping (long lines will not break automatically).
 
 -- Folding settings (used to collapse and expand code sections)
 vim.opt.foldmethod = "expr" -- Set folding method to "expression-based," which allows dynamic folding based on syntax.
