@@ -24,8 +24,8 @@ input type:touchpad {
 bindsym $mod+Return exec $bin/desktop-terminal
 bindsym $mod+d exec $bin/desktop-menu run
 bindsym $mod+e exec firefox-esr
-bindsym $mod+Shift+f exec thunar
-bindsym $mod+Shift+q kill
+bindsym $mod+Shift+f exec nautilus --new-window
+bindsym $mod+Shift+q exec $bin/desktop-close
 bindsym $mod+f fullscreen toggle
 bindsym $mod+a floating toggle
 bindsym $mod+space focus mode_toggle
@@ -130,6 +130,8 @@ bindsym --locked XF86AudioNext exec playerctl next
 bindsym --locked XF86AudioPrev exec playerctl previous
 bindsym Print exec $bin/desktop-screenshot output
 bindsym Shift+Print exec $bin/desktop-screenshot region
+bindsym Ctrl+Print exec $bin/desktop-screenshot output 5
+bindsym Ctrl+Shift+Print exec $bin/desktop-screenshot region 5
 
 bar {
     swaybar_command waybar

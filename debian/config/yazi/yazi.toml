@@ -1,0 +1,8 @@
+[mgr]
+# Narrower file list, wider preview pane.
+ratio = [1, 3, 4]
+
+[preview]
+# The 600x900 default looks tiny on a 4K screen at 2x scaling.
+max_width = 2400
+max_height = 2400

@@ -52,7 +52,7 @@ SWAY_PACKAGES=(
     pipewire wireplumber xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk
 
     # apps and fonts
-    firefox-esr thunar fontconfig fonts-jetbrains-mono fonts-dejavu-core fonts-font-awesome
+    firefox-esr thunar nautilus gnome-sushi fontconfig fonts-jetbrains-mono fonts-dejavu-core fonts-font-awesome
 
     # network and bluetooth
     network-manager-applet nm-connection-editor

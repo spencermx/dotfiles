@@ -53,6 +53,7 @@ LINKS=(
     "$HOME/.vimrc                  $REPO/common/config/.vimrc"
     "$HOME/.config/nvim            $REPO/common/config/nvim"
     "$HOME/.config/yazi/theme.toml $HERE/config/yazi/theme.toml"
+    "$HOME/.config/yazi/yazi.toml  $HERE/config/yazi/yazi.toml"
 
     # your helper commands
     "$HOME/.local/bin/portal       $HERE/bin/portal"
@@ -77,6 +78,7 @@ SWAY_LINKS=(
     "$HOME/.config/waybar/config                      $HERE/sway/config/waybar/config"          # the top bar: what it shows
     "$HOME/.config/waybar/style.css                   $HERE/sway/config/waybar/style.css"       # the top bar: colours and fonts
     "$HOME/.config/alacritty/alacritty.toml           $HERE/sway/config/alacritty/alacritty.toml" # the terminal
+    "$HOME/.config/foot/foot.ini                      $HERE/sway/config/foot/foot.ini"          # second terminal, for yazi image previews
     "$HOME/.config/mako/config                        $HERE/sway/config/mako/config"            # notification pop-ups
     "$HOME/.config/swaylock/config                    $HERE/sway/config/swaylock/config"        # the lock screen
     "$HOME/.config/xdg-desktop-portal/sway-portals.conf $HERE/sway/config/xdg-desktop-portal/sway-portals.conf" # screen sharing
@@ -87,7 +89,8 @@ SWAY_LINKS=(
     "$HOME/.local/bin/desktop-terminal                $HERE/sway/bin/desktop-terminal"          # Alt+Enter
     "$HOME/.local/bin/desktop-menu                    $HERE/sway/bin/desktop-menu"              # Alt+D program launcher
     "$HOME/.local/bin/desktop-control                 $HERE/sway/bin/desktop-control"           # lock, suspend, log out, reboot, power off
-    "$HOME/.local/bin/desktop-screenshot              $HERE/sway/bin/desktop-screenshot"        # Print key
+    "$HOME/.local/bin/desktop-screenshot              $HERE/sway/bin/desktop-screenshot"        # Print key; Ctrl+Print waits 5s
+    "$HOME/.local/bin/desktop-close                   $HERE/sway/bin/desktop-close"             # Alt+Shift+Q: close window, or quit aivim on an aivim window
     "$HOME/.local/bin/desktop-swap                    $HERE/sway/bin/desktop-swap"              # Alt+S swap two windows
 )
 

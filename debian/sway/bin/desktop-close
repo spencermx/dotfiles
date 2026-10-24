@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Alt+Shift+Q: on an aivim window, shut down aivim's whole tmux server;
+# on anything else, close the window as sway's plain `kill` would.
+set -u
+
+win_pid=$(swaymsg -t get_tree | jq -r '.. | objects | select(.focused? == true) | .pid // empty' | head -n1)
+
+is_descendant() { # is $1 a descendant of $2?
+    local p=$1
+    while [ -n "$p" ] && [ "$p" -gt 1 ]; do
+        [ "$p" = "$2" ] && return 0
+        p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')
+    done
+    return 1
+}
+
+if [ -n "$win_pid" ]; then
+    for c in $(tmux -L aivim list-clients -F '#{client_pid}' 2>/dev/null); do
+        if is_descendant "$c" "$win_pid"; then
+            tmux -L aivim kill-server
+            exit 0
+        fi
+    done
+fi
+
+swaymsg kill >/dev/null

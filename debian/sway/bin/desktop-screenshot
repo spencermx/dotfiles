@@ -10,8 +10,20 @@ case "${1:-output}" in
         [[ -n $geometry ]] || exit 0
         options=(-g "$geometry")
         ;;
-    *) printf 'Usage: desktop-screenshot [output|region]\n' >&2; exit 2 ;;
+    *) printf 'Usage: desktop-screenshot [output|region] [delay-seconds]\n' >&2; exit 2 ;;
 esac
+# Optional delay, so a menu or dropdown can be opened before the capture.
+# The notice expires before the shot so it stays out of the picture.
+delay=${2:-0}
+if (( delay > 0 )); then
+    notify-send -t 1500 "Screenshot in ${delay}s"
+    sleep "$delay"
+fi
+if [[ ${1:-output} == output ]]; then
+    # Re-read the focused display after the wait, in case focus moved.
+    output=$(swaymsg -t get_outputs | jq -er '.[] | select(.focused) | .name')
+    options=(-o "$output")
+fi
 pictures=$(xdg-user-dir PICTURES 2>/dev/null) || pictures="$HOME/Pictures"
 directory="${pictures:-$HOME/Pictures}/Screenshots"
 mkdir -p -- "$directory"

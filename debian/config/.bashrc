@@ -217,8 +217,8 @@ if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
 	unset DOTFILES_CONSOLE              # nvim and yazi use their normal colours
 	export BROWSER=firefox-esr
 
-	# open Thunar here, same name as Arch's dolphin alias and mac's Finder function
-	fe() { thunar "${1:-.}" >/dev/null 2>&1 & disown; }
+	# open Nautilus here, same name as Arch's dolphin alias and mac's Finder function
+	fe() { nautilus --new-window "${1:-.}" >/dev/null 2>&1 & disown; }
 
 	# Inside Sway, these go through the Sway lock screen and its confirm menu.
 	if [ -n "${SWAYSOCK:-}" ]; then
