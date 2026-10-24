@@ -222,7 +222,8 @@
     "typescript-lsp@claude-plugins-official": true,
     "codex@openai-codex": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
-    "vercel@claude-plugins-official": true
+    "vercel@claude-plugins-official": true,
+    "runpod@runpod": true
   },
   "extraKnownMarketplaces": {
     "openai-codex": {
@@ -230,11 +231,20 @@
         "source": "github",
         "repo": "openai/codex-plugin-cc"
       }
+    },
+    "runpod": {
+      "source": {
+        "source": "github",
+        "repo": "runpod/runpod-plugins-official"
+      }
     }
   },
   "effortLevel": "high",
   "modelSettings": {
     "claude-opus-5": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
       "effortLevel": "high"
     }
   },
