@@ -79,6 +79,11 @@ and `--harden` to enable CUPS and discovery services.
 GNOME Remote Desktop is reachable from devices on your tailnet and nowhere else.
 The Wi-Fi and Ethernet interfaces stay closed. Run `--enable` to update rules.
 
+`ALLOW_LAN_SSH=yes` accepts SSH (TCP 22) on the untrusted interfaces from private
+IPv4 addresses, so a laptop on the same Wi-Fi can log in, and lets SSH replies and
+outgoing SSH sessions through the outbound LAN block. Everyone else on that
+network can reach the login too. Run `--enable` to update rules.
+
 `ALLOW_BLUETOOTH` affects only `--harden`. Bluetooth is not filtered by nftables.
 Hardening stops and disables unwanted services; a later administrator action,
 dependency, or activation mechanism may still start a disabled service.
