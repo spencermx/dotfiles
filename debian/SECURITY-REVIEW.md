@@ -1,5 +1,5 @@
 Pre-installation software safety review of `debian`, 2026-09-19, at repository commit
-`2577155a8a33db913f1250191bb1d766e6ba044f`.
+`255964013471c3dc724b4518115eb521c1fd0a14`.
 
 **Follow-up:** Neovim language servers have been disabled at the user's request.
 `run-all.sh` skips step 6, its `SERVERS` entries are commented out, and running

@@ -2,8 +2,8 @@
 
 Four OS zones — `archlinux/`, `debian/`, `mac/`, `windows/` — in one repository.
 Three of them are provisioned by a single `./setup.sh`. `debian/` is not: it
-absorbed the separate `debian-desktop/` Sway overlay in 7510fe1 and was renamed
-from `debian-new/` in 9e4a80a, so one zone now covers both the console-only
+absorbed the separate `debian-desktop/` Sway overlay in b84f6a7 and was renamed
+from `debian-new/` in 7d6e1fd, so one zone now covers both the console-only
 ThinkPad and the Sway desktop, provisioned by the numbered scripts in order or
 by `./run-all.sh`. There is no `debian/setup.sh` and no `--dry-run`.
 

@@ -31,3 +31,8 @@ desktop.ini
 [Rr]elease/
 x64/
 x86/
+
+# Per-machine Sway output files match monitors by make, model and serial
+# number, so they stay on their own machine; 2-link-dotfiles.sh links the one
+# matching `hostname -s` when it exists.
+/debian/sway/config/sway/hosts/*.conf
