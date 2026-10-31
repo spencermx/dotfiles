@@ -199,6 +199,8 @@ $Links = [ordered]@{
     "$env:USERPROFILE\.gitconfig"                              = "$RepoRoot\config\.gitconfig"
     "$env:USERPROFILE\.gitconfig.common"                       = "$SharedRoot\config\.gitconfig"
     "$env:USERPROFILE\.config\git\ignore"                      = "$SharedRoot\config\git\ignore"
+    # core.hooksPath in .gitconfig.common runs this in every repository.
+    "$env:USERPROFILE\.config\git\hooks\commit-msg"            = "$SharedRoot\config\git\hooks\commit-msg"
     "$env:USERPROFILE\.vimrc"                                  = "$SharedRoot\config\.vimrc"
     "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json" = "$SharedRoot\config\vscode\settings.json"
     # Claude Code's per-directory memory does not carry between sibling working

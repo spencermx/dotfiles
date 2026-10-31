@@ -39,10 +39,12 @@ LINKS=(
     "$HOME/.bashrc                 $HERE/config/.bashrc"
     "$HOME/.bashrc.repo            $REPO/common/config/shell/repo.bash"
 
-    # git (.gitconfig loads .gitconfig.common)
+    # git (.gitconfig loads .gitconfig.common, whose core.hooksPath runs
+    # hooks/commit-msg in every repo)
     "$HOME/.gitconfig              $HERE/config/.gitconfig"
     "$HOME/.gitconfig.common       $REPO/common/config/.gitconfig"
     "$HOME/.config/git/ignore      $REPO/common/config/git/ignore"
+    "$HOME/.config/git/hooks/commit-msg $REPO/common/config/git/hooks/commit-msg"
 
     # tmux (.tmux.conf loads .tmux.conf.common)
     "$HOME/.tmux.conf              $HERE/config/.tmux.conf"

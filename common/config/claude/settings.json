@@ -278,7 +278,7 @@
       "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
       "### User-specific",
       "**Primary use of Claude Code**: software development (personal dotfiles/machine-provisioning repo; hobby/personal posture)",
-      "**Trusted repo**: /home/dark/source/repos/dotfiles (github.com:spencermx/dotfiles.git) — this repo is PUBLIC: only this repo's own work belongs here; confidential material, secrets, and content ported in from elsewhere or from outside this session are not cleared for it, per the repo's own CLAUDE.md which also excludes personal/identity data by design",
+      "**Trusted repo**: ~/source/repos/dotfiles on every machine (github.com:spencermx/dotfiles.git) — this repo is PUBLIC: only this repo's own work belongs here; confidential material, secrets, and content ported in from elsewhere or from outside this session are not cleared for it, per the repo's own CLAUDE.md which also excludes personal/identity data by design",
       "**Org-specific CLIs**: None configured",
       "routine under this repo's zone directories (archlinux/, debian/, mac/, windows/, common/) for provisioning-script work is in scope for the user's usual activity"
     ]

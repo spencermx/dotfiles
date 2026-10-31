@@ -1,0 +1,76 @@
+#!/bin/sh
+# commit-msg: refuse a commit message that carries AI attribution, then hand
+# the message to the repository's own commit-msg hook, if it has one.
+#
+# Installed for every repository on a machine: common/config/.gitconfig sets
+# core.hooksPath = ~/.config/git/hooks, and each zone's setup links this file
+# to ~/.config/git/hooks/commit-msg.
+#
+# Refused, in any letter case:
+#   - a Co-authored-by line that names Claude or Anthropic
+#   - "Generated with Claude Code", with or without the robot emoji or the
+#     markdown link around "Claude Code"
+#   - noreply@anthropic.com anywhere in the message
+# Other trailers that name Claude (Reviewed-by, Reported-by) and other
+# co-authors (a Vercel bot, a person) pass.
+#
+# What it does not cover:
+#   - A repository that sets its own core.hooksPath (husky, lefthook, ...)
+#     overrides this one, and then this hook does not run there at all.
+#   - While core.hooksPath is set, git stops looking in .git/hooks. This hook
+#     runs .git/hooks/commit-msg itself, but any other hook kept in .git/hooks
+#     (pre-commit, pre-push, ...) is skipped.
+#   - git commit --no-verify skips it, as it skips every commit-msg hook, and
+#     cherry-pick and plain rebase picks never run commit-msg.
+#
+# Check a message file without committing:
+#   NOAI_CHECK_ONLY=1 ~/.config/git/hooks/commit-msg FILE
+# exits 1 and prints the offending lines if the message would be refused.
+
+msg_file=$1
+
+if [ -z "$msg_file" ] || [ ! -r "$msg_file" ]; then
+    echo "commit-msg: cannot read the commit message file '$msg_file'" >&2
+    exit 1
+fi
+
+coauthor='^[[:space:]]*co[-_ ]?authored[-_ ]?by[[:space:]]*:'
+
+# Only the message is checked. `git commit -v` appends the diff below a
+# scissors line, and a diff may quote these very strings.
+found=$(
+    sed '/^[^[:space:]]\{1,\} -\{1,\} >8 -\{1,\}$/,$d' "$msg_file" |
+    grep -n -i -E \
+        -e "$coauthor(.*[^[:alpha:]])?claude(ai|bot|code)?([^[:alpha:]]|\$)" \
+        -e "$coauthor.*anthropic" \
+        -e 'generated[[:space:]]+with[[:space:]]*\[?[[:space:]]*claude[[:space:]_-]*code' \
+        -e 'noreply@anthropic\.com'
+)
+
+if [ -n "$found" ]; then
+    {
+        echo "commit-msg: refused, the message carries AI attribution:"
+        printf '%s\n' "$found" | sed 's/^/  line /'
+        echo "Remove those lines and commit again."
+    } >&2
+    exit 1
+fi
+
+[ -n "${NOAI_CHECK_ONLY:-}" ] && exit 0
+
+# Already handed over once (the repo's hook is a copy of this file): stop.
+[ -n "${NOAI_COMMIT_MSG_CHAINED:-}" ] && exit 0
+
+# The repository's own hook. `git rev-parse --git-path hooks` cannot find it:
+# with core.hooksPath set it answers with core.hooksPath, which is this
+# folder. Hooks live in the common git dir, which worktrees share.
+common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+repo_hook=$common_dir/hooks/commit-msg
+
+if [ -f "$repo_hook" ] && [ -x "$repo_hook" ]; then
+    NOAI_COMMIT_MSG_CHAINED=1
+    export NOAI_COMMIT_MSG_CHAINED
+    exec "$repo_hook" "$@"
+fi
+
+exit 0

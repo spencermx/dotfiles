@@ -61,7 +61,8 @@ it to differ, copy it back into that zone rather than adding a conditional.
 
 `$LINKS` symlinks point *into* the repo, so files under `config/` are the live
 configuration on a provisioned machine — there is nothing to re-copy. That
-includes `mac/config/claude/CLAUDE.md`, which is `~/.claude/CLAUDE.md`.
+includes `common/config/claude/CLAUDE.md`, which every zone links as
+`~/.claude/CLAUDE.md`.
 
 ## Line endings
 

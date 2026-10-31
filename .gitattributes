@@ -11,3 +11,7 @@
 # It tracked a file type that was not present -- `git lfs ls-files` returned
 # nothing -- so it was configuration for a problem that did not exist.
 * text=auto
+
+# The commit-msg hook is run by sh on every OS, Git for Windows' included,
+# and a CR at each line end breaks it there.
+common/config/git/hooks/* text eol=lf

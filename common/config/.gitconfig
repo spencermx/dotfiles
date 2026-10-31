@@ -16,3 +16,11 @@
 # itself is linked from common/config/git/ignore in all three zones.
 [core]
 	excludesfile = ~/.config/git/ignore
+#
+# hooksPath makes every repository run common/config/git/hooks/commit-msg,
+# which each zone links to ~/.config/git/hooks/commit-msg. It refuses a
+# message with an AI-attribution trailer, then runs the repository's own
+# .git/hooks/commit-msg. While this is set git looks nowhere else for hooks,
+# so a repository's other .git/hooks scripts do not run, and a repository that
+# sets its own core.hooksPath (husky) skips this one.
+	hooksPath = ~/.config/git/hooks

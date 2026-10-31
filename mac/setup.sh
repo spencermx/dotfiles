@@ -158,6 +158,8 @@ LINKS=(
     "$HOME/.aerospace.toml|$REPO_ROOT/config/.aerospace.toml"
     "$HOME/.config/karabiner/karabiner.json|$REPO_ROOT/config/karabiner.json"
     "$HOME/.config/git/ignore|$SHARED_ROOT/config/git/ignore"
+    # core.hooksPath in .gitconfig.common runs this in every repository.
+    "$HOME/.config/git/hooks/commit-msg|$SHARED_ROOT/config/git/hooks/commit-msg"
 
     # The file is shared; only the location VS Code reads it from is per-OS.
     "$HOME/Library/Application Support/Code/User/settings.json|$SHARED_ROOT/config/vscode/settings.json"
